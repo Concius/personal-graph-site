@@ -1,0 +1,21 @@
+{
+  "name": "personal-graph-site",
+  "version": "0.5.0",
+  "description": "Personal website with 3D graph navigation powered by Notion",
+  "type": "module",
+  "engines": {
+    "node": "20.x"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "3d-force-graph": "^1.73.0",
+    "three": "0.160.0"
+  },
+  "devDependencies": {
+    "vite": "^5.4.0"
+  }
+}

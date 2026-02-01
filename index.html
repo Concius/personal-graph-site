@@ -1,0 +1,928 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Graph</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      overflow: hidden;
+    }
+
+    /* Gradient background */
+    #gradient-bg {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: linear-gradient(to bottom, #fef3c7 0%, #1c1917 100%);
+      transition: background 0.8s ease;
+      z-index: 0;
+    }
+
+    #graph-container {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      z-index: 1;
+    }
+
+    /* === LOADING STATES === */
+    .loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: rgba(255, 255, 255, 0.6);
+      font-size: 16px;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .loading::before {
+      content: '';
+      width: 40px;
+      height: 40px;
+      border: 3px solid rgba(255, 255, 255, 0.1);
+      border-top-color: #f59e0b;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    .loading.error {
+      color: #f87171;
+    }
+
+    .loading.error::before {
+      display: none;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* === SEARCH BAR === */
+    #search-container {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 100;
+      width: 300px;
+    }
+
+    #search-input {
+      width: 100%;
+      padding: 12px 16px;
+      padding-left: 40px;
+      background: rgba(10, 10, 15, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 10px;
+      color: #e0e0e0;
+      font-size: 14px;
+      outline: none;
+      backdrop-filter: blur(10px);
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    #search-input::placeholder {
+      color: rgba(255, 255, 255, 0.4);
+    }
+
+    #search-input:focus {
+      border-color: rgba(255, 255, 255, 0.3);
+      box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+    }
+
+    #search-icon {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: rgba(255, 255, 255, 0.4);
+      pointer-events: none;
+      font-size: 14px;
+    }
+
+    /* Search results dropdown */
+    #search-results {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      margin-top: 8px;
+      background: rgba(10, 10, 15, 0.95);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
+      overflow: hidden;
+      display: none;
+      backdrop-filter: blur(10px);
+    }
+
+    #search-results.visible {
+      display: block;
+    }
+
+    .search-result-item {
+      padding: 12px 16px;
+      cursor: pointer;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      transition: background 0.15s;
+    }
+
+    .search-result-item:last-child {
+      border-bottom: none;
+    }
+
+    .search-result-item:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .search-result-item .name {
+      font-weight: 500;
+      margin-bottom: 2px;
+    }
+
+    .search-result-item .cluster {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      opacity: 0.5;
+    }
+
+    .search-no-results {
+      padding: 12px 16px;
+      color: rgba(255, 255, 255, 0.4);
+      font-size: 13px;
+    }
+
+    /* === INFO PANEL === */
+    #info-panel {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      width: 320px;
+      max-height: 80vh;
+      background: rgba(10, 10, 15, 0.9);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 24px;
+      display: none;
+      overflow-y: auto;
+      backdrop-filter: blur(10px);
+      z-index: 100;
+    }
+
+    #info-panel.visible {
+      display: block;
+    }
+
+    #info-panel h2 {
+      margin-bottom: 8px;
+      transition: color 0.3s ease;
+    }
+
+    #info-panel p {
+      line-height: 1.6;
+      color: #aaa;
+    }
+
+    #info-panel .close-btn {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      background: none;
+      border: none;
+      color: #666;
+      font-size: 20px;
+      cursor: pointer;
+    }
+
+    #info-panel .close-btn:hover {
+      color: #fff;
+    }
+
+    #panel-cluster {
+      display: inline-block;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      padding: 4px 10px;
+      border: 1px solid #666;
+      border-radius: 20px;
+      margin-bottom: 16px;
+      transition: all 0.3s ease;
+    }
+
+    /* Cluster indicator */
+    #cluster-indicator {
+      position: fixed;
+      top: 24px;
+      left: 20px;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      font-weight: 600;
+      transition: color 0.5s ease;
+      z-index: 100;
+      text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+    }
+
+    /* Instructions */
+    #instructions {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      background: rgba(10, 10, 15, 0.7);
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.5);
+      z-index: 100;
+    }
+
+    /* === MINIMAP === */
+    #minimap-container {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      width: 180px;
+      height: 180px;
+      background: rgba(10, 10, 15, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 10px;
+      overflow: hidden;
+      z-index: 100;
+      backdrop-filter: blur(10px);
+    }
+
+    #minimap-header {
+      padding: 6px 10px;
+      font-size: 10px;
+      letter-spacing: 2px;
+      color: rgba(255, 255, 255, 0.4);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      user-select: none;
+      cursor: grab;
+    }
+
+    #minimap {
+      width: 100%;
+      height: calc(100% - 28px);
+    }
+
+    #minimap canvas {
+      width: 100% !important;
+      height: 100% !important;
+    }
+
+    #camera-indicator {
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      background: #f59e0b;
+      border: 2px solid #fff;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      box-shadow: 0 0 10px rgba(245, 158, 11, 0.8);
+      z-index: 10;
+    }
+
+    #minimap-controls {
+      display: inline-flex;
+      gap: 4px;
+      float: right;
+    }
+
+    #minimap-controls button {
+      width: 20px;
+      height: 20px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 4px;
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 14px;
+      line-height: 1;
+      cursor: pointer;
+      padding: 0;
+    }
+
+    #minimap-controls button:hover {
+      background: rgba(255, 255, 255, 0.2);
+      color: #fff;
+    }
+
+    /* === CONTENT WINDOWS === */
+    #windows-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 200;
+    }
+
+    .content-window {
+      position: absolute;
+      min-width: 300px;
+      min-height: 200px;
+      background: rgba(15, 15, 20, 0.95);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 10px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+      display: flex;
+      flex-direction: column;
+      pointer-events: auto;
+      backdrop-filter: blur(15px);
+      overflow: hidden;
+    }
+
+    .content-window.minimized {
+      display: none;
+    }
+
+    .content-window.maximized {
+      width: 100vw !important;
+      height: calc(100vh - 50px) !important;
+      top: 0 !important;
+      left: 0 !important;
+      border-radius: 0;
+    }
+
+    .window-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      background: rgba(255, 255, 255, 0.05);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      cursor: grab;
+      user-select: none;
+    }
+
+    .window-header:active {
+      cursor: grabbing;
+    }
+
+    .window-title {
+      font-size: 14px;
+      font-weight: 500;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .window-title-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    .window-controls {
+      display: flex;
+      gap: 8px;
+    }
+
+    .window-controls button {
+      width: 24px;
+      height: 24px;
+      border: none;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.1);
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .window-controls button:hover {
+      background: rgba(255, 255, 255, 0.2);
+      color: #fff;
+    }
+
+    .window-controls .close-btn:hover {
+      background: #e53935;
+      color: #fff;
+    }
+
+    .window-content {
+      flex: 1;
+      padding: 20px;
+      overflow-y: auto;
+      color: #ccc;
+      line-height: 1.7;
+    }
+
+    .window-content h1 {
+      font-size: 24px;
+      color: #fff;
+      margin-bottom: 16px;
+    }
+
+    .window-content h2 {
+      font-size: 20px;
+      color: #fff;
+      margin-top: 24px;
+      margin-bottom: 12px;
+    }
+
+    .window-content h3 {
+      font-size: 16px;
+      color: #fff;
+      margin-top: 20px;
+      margin-bottom: 10px;
+    }
+
+    .window-content h4 {
+      font-size: 14px;
+      color: #ddd;
+      margin-top: 16px;
+      margin-bottom: 8px;
+    }
+
+    .window-content p {
+      margin-bottom: 14px;
+    }
+
+    .window-content ul, .window-content ol {
+      margin: 12px 0;
+      padding-left: 24px;
+    }
+
+    .window-content li {
+      margin-bottom: 6px;
+    }
+
+    .window-content a {
+      color: #6366f1;
+      text-decoration: none;
+    }
+
+    .window-content a:hover {
+      text-decoration: underline;
+    }
+
+    .window-content a.node-link {
+      color: inherit;
+      background: rgba(255, 255, 255, 0.1);
+      padding: 2px 8px;
+      border-radius: 4px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .window-content a.node-link:hover {
+      background: rgba(255, 255, 255, 0.2);
+      text-decoration: none;
+    }
+
+    .window-content code {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: 'Fira Code', 'Consolas', monospace;
+      font-size: 0.9em;
+    }
+
+    .window-content pre {
+      background: rgba(0, 0, 0, 0.3);
+      padding: 16px;
+      border-radius: 8px;
+      overflow-x: auto;
+      margin: 16px 0;
+    }
+
+    .window-content pre code {
+      background: none;
+      padding: 0;
+    }
+
+    .window-content blockquote {
+      border-left: 3px solid rgba(255, 255, 255, 0.3);
+      padding-left: 16px;
+      margin: 16px 0;
+      color: #aaa;
+      font-style: italic;
+    }
+
+    .window-content hr {
+      border: none;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      margin: 24px 0;
+    }
+
+    .window-content figure {
+      margin: 20px 0;
+    }
+
+    .window-content figure img {
+      max-width: 100%;
+      border-radius: 8px;
+    }
+
+    .window-content figcaption {
+      font-size: 12px;
+      color: #888;
+      text-align: center;
+      margin-top: 8px;
+    }
+
+    .window-content .callout {
+      display: flex;
+      gap: 12px;
+      background: rgba(255, 255, 255, 0.05);
+      padding: 16px;
+      border-radius: 8px;
+      margin: 16px 0;
+    }
+
+    .window-content .callout-icon {
+      font-size: 20px;
+    }
+
+    .window-content .callout-content {
+      flex: 1;
+    }
+
+    .window-content .bookmark {
+      display: block;
+      background: rgba(255, 255, 255, 0.05);
+      padding: 12px 16px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      margin: 12px 0;
+    }
+
+    .window-content .tech-stack {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 16px 0;
+    }
+
+    .window-content .tech-tag {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      color: #aaa;
+    }
+
+    .window-content .links-section {
+      margin-top: 20px;
+      padding-top: 16px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .window-content .links-section a {
+      display: inline-block;
+      margin-right: 16px;
+      margin-bottom: 8px;
+    }
+
+    .window-content .loading {
+      height: 200px;
+    }
+
+    /* Resize handles */
+    .resize-handle {
+      position: absolute;
+      background: transparent;
+    }
+
+    .resize-handle.right {
+      top: 10px;
+      right: 0;
+      width: 6px;
+      height: calc(100% - 20px);
+      cursor: ew-resize;
+    }
+
+    .resize-handle.bottom {
+      bottom: 0;
+      left: 10px;
+      width: calc(100% - 20px);
+      height: 6px;
+      cursor: ns-resize;
+    }
+
+    .resize-handle.corner {
+      bottom: 0;
+      right: 0;
+      width: 16px;
+      height: 16px;
+      cursor: nwse-resize;
+    }
+
+    /* === TASKBAR === */
+    #taskbar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 44px;
+      background: rgba(10, 10, 15, 0.9);
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      align-items: center;
+      padding: 0 20px;
+      z-index: 300;
+      backdrop-filter: blur(10px);
+      transform: translateY(100%);
+      transition: transform 0.2s ease;
+    }
+
+    #taskbar.visible {
+      transform: translateY(0);
+    }
+
+    #taskbar-items {
+      display: flex;
+      gap: 8px;
+    }
+
+    .taskbar-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 6px;
+      color: #ccc;
+      font-size: 13px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .taskbar-item:hover {
+      background: rgba(255, 255, 255, 0.15);
+    }
+
+    .taskbar-item .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    /* === MUSIC PLAYER === */
+    #music-player {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      width: 200px;
+      background: rgba(10, 10, 15, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 10px;
+      overflow: hidden;
+      z-index: 100;
+      backdrop-filter: blur(10px);
+      user-select: none;
+    }
+
+    #player-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 12px;
+      font-size: 10px;
+      letter-spacing: 2px;
+      color: rgba(255, 255, 255, 0.4);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      cursor: grab;
+    }
+
+    #player-header:active {
+      cursor: grabbing;
+    }
+
+    #player-toggle-btn {
+      width: 20px;
+      height: 20px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 4px;
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 14px;
+      line-height: 1;
+      cursor: pointer;
+      padding: 0;
+    }
+
+    #player-toggle-btn:hover {
+      background: rgba(255, 255, 255, 0.2);
+      color: #fff;
+    }
+
+    #player-body {
+      padding: 12px;
+    }
+
+    #player-body.collapsed {
+      display: none;
+    }
+
+    #track-info {
+      margin-bottom: 10px;
+      text-align: center;
+    }
+
+    #track-name {
+      font-size: 12px;
+      color: #fff;
+      display: block;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    #player-controls {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    #player-controls button {
+      width: 36px;
+      height: 36px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 50%;
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.15s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #player-controls button:hover {
+      background: rgba(255, 255, 255, 0.2);
+      color: #fff;
+      transform: scale(1.05);
+    }
+
+    #play-btn {
+      width: 42px !important;
+      height: 42px !important;
+      font-size: 14px !important;
+      background: rgba(245, 158, 11, 0.3) !important;
+      border-color: rgba(245, 158, 11, 0.5) !important;
+    }
+
+    #play-btn:hover {
+      background: rgba(245, 158, 11, 0.5) !important;
+    }
+
+    #volume-control {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    #volume-icon {
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    #volume-slider {
+      flex: 1;
+      height: 4px;
+      -webkit-appearance: none;
+      appearance: none;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 2px;
+      outline: none;
+    }
+
+    #volume-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 12px;
+      height: 12px;
+      background: #f59e0b;
+      border-radius: 50%;
+      cursor: pointer;
+    }
+
+    #volume-slider::-moz-range-thumb {
+      width: 12px;
+      height: 12px;
+      background: #f59e0b;
+      border-radius: 50%;
+      cursor: pointer;
+      border: none;
+    }
+
+    #progress-container {
+      height: 3px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 2px;
+      overflow: hidden;
+      cursor: pointer;
+    }
+
+    #progress-bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #f59e0b, #fbbf24);
+      border-radius: 2px;
+      transition: width 0.1s linear;
+    }
+  </style>
+</head>
+<body>
+  <div id="gradient-bg"></div>
+  
+  <div id="graph-container"></div>
+
+  <!-- Search bar -->
+  <div id="search-container">
+    <span id="search-icon">⌕</span>
+    <input 
+      type="text" 
+      id="search-input" 
+      placeholder="Search nodes..." 
+      autocomplete="off"
+    />
+    <div id="search-results"></div>
+  </div>
+
+  <!-- Window container - windows will be appended here -->
+  <div id="windows-container"></div>
+
+  <!-- Taskbar for minimized windows -->
+  <div id="taskbar">
+    <div id="taskbar-items"></div>
+  </div>
+
+  <div id="cluster-indicator">Core</div>
+
+  <div id="info-panel">
+    <button class="close-btn" onclick="closePanel()">×</button>
+    <span id="panel-cluster">Cluster</span>
+    <h2 id="panel-title">Node Title</h2>
+    <p id="panel-description">Node description goes here.</p>
+  </div>
+
+  <div id="instructions">
+    Click a node to view details · Drag to rotate · Scroll to zoom
+  </div>
+
+  <!-- Minimap -->
+  <div id="minimap-container">
+    <div id="minimap-header">
+      MAP
+      <div id="minimap-controls">
+        <button id="minimap-zoom-in">+</button>
+        <button id="minimap-zoom-out">−</button>
+      </div>
+    </div>
+    <div id="minimap"></div>
+    <div id="camera-indicator"></div>
+  </div>
+
+  <!-- Music Player -->
+  <div id="music-player">
+    <div id="player-header">
+      <span id="player-title">♪ MUSIC</span>
+      <button id="player-toggle-btn" title="Collapse">−</button>
+    </div>
+    <div id="player-body">
+      <div id="track-info">
+        <span id="track-name">No track loaded</span>
+      </div>
+      <div id="player-controls">
+        <button id="prev-btn" title="Previous">⏮</button>
+        <button id="play-btn" title="Play">▶</button>
+        <button id="next-btn" title="Next">⏭</button>
+      </div>
+      <div id="volume-control">
+        <span id="volume-icon">🔊</span>
+        <input type="range" id="volume-slider" min="0" max="100" value="50">
+      </div>
+      <div id="progress-container">
+        <div id="progress-bar"></div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
