@@ -2,192 +2,179 @@ import ForceGraph3D from '3d-force-graph';
 import * as THREE from 'three';
 import { fetchGraphData, fetchNodeContent } from './data.js';
 
-// Global state - will be populated after fetching from Notion
 let graphData = { nodes: [], links: [] };
 let clusters = {};
 let Graph = null;
-
-// Track current active cluster for theming
 let activeCluster = 'core';
 let searchQuery = '';
 
-// DOM elements
 const gradientBg = document.getElementById('gradient-bg');
 const graphContainer = document.getElementById('graph-container');
 
-// Update background colors based on active cluster
-function updateBackground(clusterName) {
-  const cluster = clusters[clusterName] || clusters.core || {
-    name: 'Core',
-    color: '#f59e0b',
-    bgLight: '#fef3c7',
-    bgDark: '#1c1917'
+// === SETTINGS ===
+const defaultSettings = {
+  theme: 'default',
+  showMinimap: true,
+  showMusicPlayer: true,
+  showInstructions: true,
+  showClusterIndicator: true,
+  openInTabs: true
+};
+
+const themes = {
+  default: { name: 'Amber', bgLight: '#fef3c7', bgDark: '#1c1917' },
+  ocean: { name: 'Ocean', bgLight: '#a5f3fc', bgDark: '#0c1929' },
+  forest: { name: 'Forest', bgLight: '#bbf7d0', bgDark: '#0a1f0d' },
+  sunset: { name: 'Sunset', bgLight: '#fecaca', bgDark: '#2d1b1b' },
+  midnight: { name: 'Midnight', bgLight: '#c4b5fd', bgDark: '#0f0a1f' },
+  mono: { name: 'Mono', bgLight: '#d4d4d4', bgDark: '#0a0a0a' }
+};
+
+let settings = { ...defaultSettings };
+
+function loadSettings() {
+  try {
+    const saved = localStorage.getItem('graphSiteSettings');
+    if (saved) settings = { ...defaultSettings, ...JSON.parse(saved) };
+  } catch (e) {}
+  applySettings();
+}
+
+function saveSettings() {
+  try {
+    localStorage.setItem('graphSiteSettings', JSON.stringify(settings));
+  } catch (e) {}
+}
+
+function applySettings() {
+  const minimap = document.getElementById('minimap-container');
+  const musicPlayer = document.getElementById('music-player');
+  const instructions = document.getElementById('instructions');
+  const clusterIndicator = document.getElementById('cluster-indicator');
+  
+  if (minimap) minimap.style.display = settings.showMinimap ? 'block' : 'none';
+  if (musicPlayer) musicPlayer.style.display = settings.showMusicPlayer ? 'block' : 'none';
+  if (instructions) instructions.style.display = settings.showInstructions ? 'block' : 'none';
+  if (clusterIndicator) clusterIndicator.style.display = settings.showClusterIndicator ? 'block' : 'none';
+  
+  document.querySelectorAll('.toggle-switch[data-setting]').forEach(toggle => {
+    toggle.classList.toggle('active', settings[toggle.dataset.setting]);
+  });
+  
+  document.querySelectorAll('.theme-option').forEach(opt => {
+    opt.classList.toggle('active', opt.dataset.theme === settings.theme);
+  });
+}
+
+function initSettings() {
+  loadSettings();
+  
+  const settingsBtn = document.getElementById('settings-btn');
+  const settingsPanel = document.getElementById('settings-panel');
+  const settingsOverlay = document.getElementById('settings-overlay');
+  const settingsClose = settingsPanel?.querySelector('.settings-close');
+  const themeGrid = document.getElementById('theme-grid');
+  
+  if (themeGrid) {
+    themeGrid.innerHTML = Object.entries(themes).map(([key, theme]) => `
+      <div class="theme-option ${key === settings.theme ? 'active' : ''}" data-theme="${key}">
+        <div class="theme-preview" style="background: linear-gradient(to bottom, ${theme.bgLight}, ${theme.bgDark})"></div>
+        <div class="theme-name">${theme.name}</div>
+      </div>
+    `).join('');
+  }
+  
+  const openSettings = () => {
+    settingsPanel?.classList.add('visible');
+    settingsOverlay?.classList.add('visible');
   };
+  
+  const closeSettings = () => {
+    settingsPanel?.classList.remove('visible');
+    settingsOverlay?.classList.remove('visible');
+  };
+  
+  settingsBtn?.addEventListener('click', openSettings);
+  settingsClose?.addEventListener('click', closeSettings);
+  settingsOverlay?.addEventListener('click', closeSettings);
+  
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && settingsPanel?.classList.contains('visible')) closeSettings();
+  });
+  
+  document.querySelectorAll('.theme-option').forEach(opt => {
+    opt.addEventListener('click', () => {
+      settings.theme = opt.dataset.theme;
+      document.querySelectorAll('.theme-option').forEach(o => o.classList.remove('active'));
+      opt.classList.add('active');
+      saveSettings();
+      updateBackground(activeCluster);
+    });
+  });
+  
+  document.querySelectorAll('.toggle-switch[data-setting]').forEach(toggle => {
+    toggle.classList.toggle('active', settings[toggle.dataset.setting]);
+    toggle.addEventListener('click', () => {
+      const setting = toggle.dataset.setting;
+      settings[setting] = !settings[setting];
+      toggle.classList.toggle('active', settings[setting]);
+      saveSettings();
+      applySettings();
+    });
+  });
+}
+
+// === BACKGROUND ===
+function updateBackground(clusterName) {
+  const cluster = clusters[clusterName];
   activeCluster = clusterName;
   
-  gradientBg.style.background = `linear-gradient(
-    to bottom,
-    ${cluster.bgLight} 0%,
-    ${cluster.bgDark} 100%
-  )`;
+  let bgLight, bgDark;
+  
+  if (cluster) {
+    bgLight = cluster.bgLight;
+    bgDark = cluster.bgDark;
+  } else {
+    const theme = themes[settings.theme] || themes.default;
+    bgLight = theme.bgLight;
+    bgDark = theme.bgDark;
+  }
+  
+  gradientBg.style.background = `linear-gradient(to bottom, ${bgLight} 0%, ${bgDark} 100%)`;
   
   const indicator = document.getElementById('cluster-indicator');
-  if (indicator) {
+  if (indicator && cluster) {
     indicator.textContent = cluster.name;
     indicator.style.color = cluster.color;
   }
 }
 
-// Search functionality
+// === SEARCH ===
 function nodeMatchesSearch(node, query) {
   const q = query.toLowerCase();
-  return (
-    node.name.toLowerCase().includes(q) ||
+  return node.name.toLowerCase().includes(q) ||
     node.id.toLowerCase().includes(q) ||
     (node.description && node.description.toLowerCase().includes(q)) ||
-    (clusters[node.group]?.name.toLowerCase().includes(q))
-  );
+    (clusters[node.group]?.name.toLowerCase().includes(q));
 }
 
-// === MAIN INITIALIZATION ===
-async function init() {
-  // Show loading state
-  graphContainer.innerHTML = '<div class="loading">Loading graph from Notion...</div>';
-  
-  try {
-    // Fetch data from Notion
-    const data = await fetchGraphData();
-    graphData = { nodes: data.nodes, links: data.links };
-    clusters = data.clusters;
-    
-    // Clear loading state
-    graphContainer.innerHTML = '';
-    
-    // Initialize background with default cluster
-    updateBackground('core');
-    
-    // Initialize the 3D graph
-    Graph = ForceGraph3D({ rendererConfig: { antialias: true, alpha: true } })
-      (graphContainer)
-      .graphData(graphData)
-      .nodeLabel('name')
-      .nodeThreeObject(node => {
-        const baseColor = clusters[node.group]?.color || '#6366f1';
-        const isMatch = !searchQuery || nodeMatchesSearch(node, searchQuery);
-        
-        const geometry = new THREE.SphereGeometry(Math.cbrt(node.weight || 1) * 4, 16, 16);
-        const material = new THREE.MeshLambertMaterial({
-          color: isMatch ? baseColor : '#222222',
-          transparent: true,
-          opacity: isMatch ? 0.9 : 0.15
-        });
-        
-        return new THREE.Mesh(geometry, material);
-      })
-      .nodeThreeObjectExtend(false)
-      .linkColor(link => {
-        const sourceNode = typeof link.source === 'object' ? link.source : 
-          graphData.nodes.find(n => n.id === link.source);
-        const cluster = clusters[sourceNode?.group];
-        
-        if (searchQuery) {
-          return 'rgba(255, 255, 255, 0.05)';
-        }
-        return cluster ? cluster.color + '40' : 'rgba(255, 255, 255, 0.2)';
-      })
-      .linkWidth(1.5)
-      .linkOpacity(0.8)
-      .onNodeClick(node => {
-        createWindow(node);
-        updateBackground(node.group);
-        focusOnNode(node);
-        clearSearch();
-      })
-      .onNodeHover(node => {
-        document.body.style.cursor = node ? 'pointer' : 'default';
-      })
-      .backgroundColor('rgba(0,0,0,0)');
-    
-    // Setup clustering force
-    Graph.d3Force('cluster', alpha => {
-      const clusterCenters = {};
-      
-      graphData.nodes.forEach(node => {
-        if (!clusterCenters[node.group]) {
-          clusterCenters[node.group] = { x: 0, y: 0, z: 0, count: 0 };
-        }
-        clusterCenters[node.group].x += node.x || 0;
-        clusterCenters[node.group].y += node.y || 0;
-        clusterCenters[node.group].z += node.z || 0;
-        clusterCenters[node.group].count++;
-      });
-      
-      Object.keys(clusterCenters).forEach(group => {
-        const c = clusterCenters[group];
-        c.x /= c.count;
-        c.y /= c.count;
-        c.z /= c.count;
-      });
-      
-      const strength = 0.3;
-      graphData.nodes.forEach(node => {
-        const center = clusterCenters[node.group];
-        if (center && node.x !== undefined) {
-          node.vx += (center.x - node.x) * alpha * strength;
-          node.vy += (center.y - node.y) * alpha * strength;
-          node.vz += (center.z - node.z) * alpha * strength;
-        }
-      });
-    });
-    
-    Graph.d3Force('charge').strength(-120);
-    Graph.d3Force('link').distance(50);
-    
-    // Setup background click handler
-    Graph.onBackgroundClick(() => {
-      window.closePanel();
-    });
-    
-    // Initialize other components
-    initSearch();
-    initMinimap();
-    initWindowResize();
-    
-  } catch (error) {
-    console.error('Failed to initialize graph:', error);
-    graphContainer.innerHTML = '<div class="loading error">Failed to load graph. Please refresh the page.</div>';
-  }
-}
-
-// === SEARCH FUNCTIONALITY ===
 function initSearch() {
   const searchInput = document.getElementById('search-input');
   const searchResults = document.getElementById('search-results');
-  
   if (!searchInput || !searchResults) return;
   
-  searchInput.addEventListener('input', (e) => {
-    performSearch(e.target.value);
-  });
+  searchInput.addEventListener('input', (e) => performSearch(e.target.value));
   
   searchInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-      clearSearch();
-      searchInput.blur();
-    }
-    
+    if (e.key === 'Escape') { clearSearch(); searchInput.blur(); }
     if (e.key === 'Enter') {
       const firstResult = searchResults.querySelector('.search-result-item');
-      if (firstResult) {
-        firstResult.click();
-      }
+      if (firstResult) firstResult.click();
     }
   });
   
   document.addEventListener('click', (e) => {
-    if (!e.target.closest('#search-container')) {
-      searchResults.classList.remove('visible');
-    }
+    if (!e.target.closest('#search-container')) searchResults.classList.remove('visible');
   });
   
   document.addEventListener('keydown', (e) => {
@@ -202,7 +189,6 @@ function performSearch(query) {
   searchQuery = query;
   const searchResults = document.getElementById('search-results');
   
-  // Refresh node appearance
   if (Graph) {
     Graph.nodeThreeObject(Graph.nodeThreeObject());
     Graph.linkColor(Graph.linkColor());
@@ -210,7 +196,6 @@ function performSearch(query) {
   
   if (!query.trim()) {
     searchResults.classList.remove('visible');
-    searchResults.innerHTML = '';
     return;
   }
   
@@ -218,48 +203,37 @@ function performSearch(query) {
   
   if (matches.length === 0) {
     searchResults.innerHTML = '<div class="search-no-results">No matching nodes</div>';
-    searchResults.classList.add('visible');
-    return;
-  }
-  
-  searchResults.innerHTML = matches.map(node => {
-    const cluster = clusters[node.group];
-    return `
-      <div class="search-result-item" data-node-id="${node.id}">
+  } else {
+    searchResults.innerHTML = matches.map(node => {
+      const cluster = clusters[node.group];
+      return `<div class="search-result-item" data-node-id="${node.id}">
         <div class="name" style="color: ${cluster?.color || '#fff'}">${node.name}</div>
         <div class="cluster">${cluster?.name || 'Unknown'}</div>
-      </div>
-    `;
-  }).join('');
+      </div>`;
+    }).join('');
+    
+    searchResults.querySelectorAll('.search-result-item').forEach(item => {
+      item.addEventListener('click', () => {
+        const node = graphData.nodes.find(n => n.id === item.dataset.nodeId);
+        if (node) {
+          createWindow(node);
+          updateBackground(node.group);
+          focusOnNode(node);
+          clearSearch();
+        }
+      });
+    });
+  }
   
   searchResults.classList.add('visible');
-  
-  searchResults.querySelectorAll('.search-result-item').forEach(item => {
-    item.addEventListener('click', () => {
-      const nodeId = item.dataset.nodeId;
-      const node = graphData.nodes.find(n => n.id === nodeId);
-      if (node) {
-        createWindow(node);
-        updateBackground(node.group);
-        focusOnNode(node);
-        clearSearch();
-      }
-    });
-  });
 }
 
 function clearSearch() {
   const searchInput = document.getElementById('search-input');
   const searchResults = document.getElementById('search-results');
-  
   if (searchInput) searchInput.value = '';
   searchQuery = '';
-  if (searchResults) {
-    searchResults.classList.remove('visible');
-    searchResults.innerHTML = '';
-  }
-  
-  // Refresh node appearance
+  if (searchResults) searchResults.classList.remove('visible');
   if (Graph) {
     Graph.nodeThreeObject(Graph.nodeThreeObject());
     Graph.linkColor(Graph.linkColor());
@@ -268,484 +242,36 @@ function clearSearch() {
 
 function focusOnNode(node) {
   if (!Graph) return;
-  
   const distance = 120;
   const distRatio = 1 + distance / Math.hypot(node.x, node.y, node.z);
-  
   Graph.cameraPosition(
-    { 
-      x: node.x * distRatio, 
-      y: node.y * distRatio, 
-      z: node.z * distRatio 
-    },
+    { x: node.x * distRatio, y: node.y * distRatio, z: node.z * distRatio },
     node,
-    1500
+    1000
   );
 }
 
-// === PANEL FUNCTIONS ===
-function showPanel(node) {
-  const panel = document.getElementById('info-panel');
-  const title = document.getElementById('panel-title');
-  const description = document.getElementById('panel-description');
-  const clusterBadge = document.getElementById('panel-cluster');
-  
-  if (!panel) return;
-  
-  const cluster = clusters[node.group];
-  
-  title.textContent = node.name;
-  title.style.color = cluster?.color || '#fff';
-  description.textContent = node.description || 'No description yet.';
-  clusterBadge.textContent = cluster?.name || 'Unknown';
-  clusterBadge.style.borderColor = cluster?.color || '#666';
-  clusterBadge.style.color = cluster?.color || '#666';
-  
-  panel.classList.add('visible');
-}
-
-window.closePanel = function() {
-  const panel = document.getElementById('info-panel');
-  if (panel) panel.classList.remove('visible');
-};
-
-// === WINDOW RESIZE ===
-function initWindowResize() {
-  window.addEventListener('resize', () => {
-    if (Graph) {
-      Graph.width(window.innerWidth);
-      Graph.height(window.innerHeight);
-    }
-  });
-}
-
-// === MINIMAP ===
-function initMinimap() {
-  const minimapContainer = document.getElementById('minimap-container');
-  const minimapEl = document.getElementById('minimap');
-  const cameraIndicator = document.getElementById('camera-indicator');
-  
-  if (!minimapEl || !Graph) return;
-  
-  // Create minimap renderer
-  const minimapRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-  minimapRenderer.setSize(180, 152);
-  minimapEl.appendChild(minimapRenderer.domElement);
-  
-  // Zoom level for minimap
-  let minimapZoom = 200;
-  const MIN_ZOOM = 50;
-  const MAX_ZOOM = 500;
-  
-  // Minimap camera offset (for panning)
-  let minimapCameraOffset = { x: 0, z: 0 };
-  
-  // Orthographic camera for top-down view
-  const minimapCamera = new THREE.OrthographicCamera(-minimapZoom, minimapZoom, minimapZoom, -minimapZoom, 1, 1000);
-  minimapCamera.position.set(0, 300, 0);
-  minimapCamera.lookAt(0, 0, 0);
-  
-  function updateMinimapCamera() {
-    minimapCamera.left = -minimapZoom;
-    minimapCamera.right = minimapZoom;
-    minimapCamera.top = minimapZoom;
-    minimapCamera.bottom = -minimapZoom;
-    minimapCamera.updateProjectionMatrix();
-  }
-  
-  function updateMinimapCameraPosition() {
-    minimapCamera.position.set(minimapCameraOffset.x, 300, minimapCameraOffset.z);
-    minimapCamera.lookAt(minimapCameraOffset.x, 0, minimapCameraOffset.z);
-  }
-  
-  // Get the main scene from the graph
-  const scene = Graph.scene();
-  
-  // Render minimap on each frame
-  function updateMinimap() {
-    minimapRenderer.render(scene, minimapCamera);
-    
-    // Update camera indicator position
-    const mainCamera = Graph.camera();
-    const pos = mainCamera.position;
-    
-    const mapSize = 152;
-    const worldRange = minimapZoom * 2;
-    
-    // Account for minimap camera offset
-    const x = ((pos.x - minimapCameraOffset.x + minimapZoom) / worldRange) * mapSize;
-    const z = ((pos.z - minimapCameraOffset.z + minimapZoom) / worldRange) * mapSize;
-    
-    cameraIndicator.style.left = `${Math.max(0, Math.min(mapSize, x))}px`;
-    cameraIndicator.style.top = `${28 + Math.max(0, Math.min(mapSize, z))}px`;
-    
-    requestAnimationFrame(updateMinimap);
-  }
-  
-  updateMinimap();
-  
-  // === MINIMAP ZOOM ===
-  function minimapZoomIn() {
-    minimapZoom = Math.max(MIN_ZOOM, minimapZoom - 30);
-    updateMinimapCamera();
-  }
-  
-  function minimapZoomOut() {
-    minimapZoom = Math.min(MAX_ZOOM, minimapZoom + 30);
-    updateMinimapCamera();
-  }
-  
-  const zoomInBtn = document.getElementById('minimap-zoom-in');
-  const zoomOutBtn = document.getElementById('minimap-zoom-out');
-  
-  if (zoomInBtn) {
-    zoomInBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      minimapZoomIn();
-    });
-  }
-  
-  if (zoomOutBtn) {
-    zoomOutBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      minimapZoomOut();
-    });
-  }
-  
-  minimapEl.addEventListener('wheel', (e) => {
-    e.preventDefault();
-    if (e.deltaY < 0) {
-      minimapZoomIn();
-    } else {
-      minimapZoomOut();
-    }
-  });
-  
-  // === MINIMAP CLICK & DRAG NAVIGATION ===
-  let isMinimapDragging = false;
-  let minimapDragStart = { x: 0, y: 0 };
-  let hasDragged = false;
-  
-  function getWorldCoordsFromMinimap(clientX, clientY) {
-    const rect = minimapEl.getBoundingClientRect();
-    const clickX = clientX - rect.left;
-    const clickY = clientY - rect.top;
-    
-    const mapWidth = rect.width;
-    const mapHeight = rect.height;
-    
-    const worldX = ((clickX / mapWidth) - 0.5) * minimapZoom * 2 + minimapCameraOffset.x;
-    const worldZ = ((clickY / mapHeight) - 0.5) * minimapZoom * 2 + minimapCameraOffset.z;
-    
-    return { x: worldX, z: worldZ };
-  }
-  
-  function findClosestNode(worldX, worldZ, tolerance = 30) {
-    let closestNode = null;
-    let closestDist = Infinity;
-    
-    graphData.nodes.forEach(node => {
-      const dx = (node.x || 0) - worldX;
-      const dz = (node.z || 0) - worldZ;
-      const dist = Math.sqrt(dx * dx + dz * dz);
-      
-      if (dist < closestDist && dist < tolerance) {
-        closestDist = dist;
-        closestNode = node;
-      }
-    });
-    
-    return closestNode;
-  }
-  
-  minimapEl.addEventListener('mousedown', (e) => {
-    isMinimapDragging = true;
-    hasDragged = false;
-    minimapDragStart = { x: e.clientX, y: e.clientY };
-    minimapEl.style.cursor = 'grabbing';
-  });
-  
-  document.addEventListener('mousemove', (e) => {
-    if (isMinimapDragging) {
-      const dx = e.clientX - minimapDragStart.x;
-      const dy = e.clientY - minimapDragStart.y;
-      
-      if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
-        hasDragged = true;
-        
-        const rect = minimapEl.getBoundingClientRect();
-        const scaleX = (minimapZoom * 2) / rect.width;
-        const scaleZ = (minimapZoom * 2) / rect.height;
-        
-        minimapCameraOffset.x -= dx * scaleX;
-        minimapCameraOffset.z -= dy * scaleZ;
-        
-        updateMinimapCameraPosition();
-        
-        minimapDragStart = { x: e.clientX, y: e.clientY };
-      }
-    }
-  });
-  
-  document.addEventListener('mouseup', (e) => {
-    if (isMinimapDragging) {
-      isMinimapDragging = false;
-      minimapEl.style.cursor = 'default';
-      
-      if (!hasDragged) {
-        const coords = getWorldCoordsFromMinimap(e.clientX, e.clientY);
-        const closestNode = findClosestNode(coords.x, coords.z);
-        
-        if (closestNode) {
-          createWindow(closestNode);
-          updateBackground(closestNode.group);
-          focusOnNode(closestNode);
-        }
-      }
-    }
-  });
-  
-  minimapEl.addEventListener('mousemove', (e) => {
-    if (isMinimapDragging) return;
-    
-    const coords = getWorldCoordsFromMinimap(e.clientX, e.clientY);
-    const overNode = findClosestNode(coords.x, coords.z);
-    minimapEl.style.cursor = overNode ? 'pointer' : 'grab';
-  });
-  
-  // === MINIMAP CONTAINER DRAGGING ===
-  let isContainerDragging = false;
-  let containerDragOffset = { x: 0, y: 0 };
-  
-  const minimapHeader = document.getElementById('minimap-header');
-  
-  if (minimapHeader) {
-    minimapHeader.addEventListener('mousedown', (e) => {
-      if (e.target.tagName !== 'BUTTON') {
-        isContainerDragging = true;
-        containerDragOffset.x = e.clientX - minimapContainer.offsetLeft;
-        containerDragOffset.y = e.clientY - minimapContainer.offsetTop;
-        minimapHeader.style.cursor = 'grabbing';
-      }
-    });
-  }
-  
-  document.addEventListener('mousemove', (e) => {
-    if (isContainerDragging) {
-      minimapContainer.style.left = `${e.clientX - containerDragOffset.x}px`;
-      minimapContainer.style.top = `${e.clientY - containerDragOffset.y}px`;
-      minimapContainer.style.right = 'auto';
-      minimapContainer.style.bottom = 'auto';
-    }
-  });
-  
-  document.addEventListener('mouseup', () => {
-    if (isContainerDragging) {
-      isContainerDragging = false;
-      if (minimapHeader) minimapHeader.style.cursor = 'grab';
-    }
-  });
-}
-
-
-// === SETTINGS MANAGEMENT ===
-
-const defaultSettings = {
-  theme: 'default',
-  showMinimap: true,
-  showMusicPlayer: true,
-  showInstructions: true,
-  showClusterIndicator: true,
-  openInTabs: true,
-  defaultWindowSize: 'medium'
-};
-
-const themes = {
-  default: { bgLight: '#fef3c7', bgDark: '#1c1917' },
-  ocean: { bgLight: '#a5f3fc', bgDark: '#0c1929' },
-  forest: { bgLight: '#bbf7d0', bgDark: '#0a1f0d' },
-  sunset: { bgLight: '#fecaca', bgDark: '#2d1b1b' },
-  midnight: { bgLight: '#c4b5fd', bgDark: '#0f0a1f' },
-  mono: { bgLight: '#d4d4d4', bgDark: '#0a0a0a' }
-};
-
-const windowSizes = {
-  small: { width: 400, height: 350 },
-  medium: { width: 550, height: 450 },
-  large: { width: 700, height: 550 }
-};
-
-let settings = { ...defaultSettings };
-
-function loadSettings() {
-  try {
-    const saved = localStorage.getItem('graphSiteSettings');
-    if (saved) {
-      settings = { ...defaultSettings, ...JSON.parse(saved) };
-    }
-  } catch (e) {
-    console.log('Could not load settings:', e);
-  }
-  applySettings();
-}
-
-function saveSettings() {
-  try {
-    localStorage.setItem('graphSiteSettings', JSON.stringify(settings));
-  } catch (e) {
-    console.log('Could not save settings:', e);
-  }
-}
-
-function applySettings() {
-  // Apply theme
-  applyTheme(settings.theme);
-  
-  // Apply visibility toggles
-  const minimap = document.getElementById('minimap-container');
-  const musicPlayer = document.getElementById('music-player');
-  const instructions = document.getElementById('instructions');
-  const clusterIndicator = document.getElementById('cluster-indicator');
-  
-  if (minimap) minimap.style.display = settings.showMinimap ? 'block' : 'none';
-  if (musicPlayer) musicPlayer.style.display = settings.showMusicPlayer ? 'block' : 'none';
-  if (instructions) instructions.style.display = settings.showInstructions ? 'block' : 'none';
-  if (clusterIndicator) clusterIndicator.style.display = settings.showClusterIndicator ? 'block' : 'none';
-  
-  // Update settings UI
-  updateSettingsUI();
-}
-
-function applyTheme(themeName) {
-  const theme = themes[themeName];
-  if (!theme) return;
-  
-  // Only apply if no active cluster override
-  if (!activeCluster || activeCluster === 'core') {
-    gradientBg.style.background = `linear-gradient(to bottom, ${theme.bgLight} 0%, ${theme.bgDark} 100%)`;
-  }
-}
-
-function updateSettingsUI() {
-  // Update theme selection
-  document.querySelectorAll('.theme-option').forEach(opt => {
-    opt.classList.toggle('active', opt.dataset.theme === settings.theme);
-  });
-  
-  // Update toggles
-  document.querySelectorAll('.toggle-switch[data-setting]').forEach(toggle => {
-    const setting = toggle.dataset.setting;
-    toggle.classList.toggle('active', settings[setting]);
-  });
-}
-
-function initSettings() {
-  loadSettings();
-  
-  const settingsBtn = document.getElementById('settings-btn');
-  const settingsPanel = document.getElementById('settings-panel');
-  const settingsOverlay = document.getElementById('settings-overlay');
-  const settingsClose = settingsPanel?.querySelector('.settings-close');
-  
-  // Build theme grid
-  const themeGrid = document.getElementById('theme-grid');
-  if (themeGrid) {
-    const themeNames = {
-      default: 'Amber',
-      ocean: 'Ocean',
-      forest: 'Forest',
-      sunset: 'Sunset',
-      midnight: 'Midnight',
-      mono: 'Mono'
-    };
-    
-    themeGrid.innerHTML = Object.entries(themes).map(([key, theme]) => `
-      <div class="theme-option ${key === settings.theme ? 'active' : ''}" data-theme="${key}">
-        <div class="theme-preview" style="background: linear-gradient(to bottom, ${theme.bgLight}, ${theme.bgDark})"></div>
-        <div class="theme-name">${themeNames[key] || key}</div>
-      </div>
-    `).join('');
-  }
-  
-  // Open/close settings panel
-  settingsBtn?.addEventListener('click', () => {
-    settingsPanel?.classList.add('visible');
-    settingsOverlay?.classList.add('visible');
-  });
-  
-  const closeSettings = () => {
-    settingsPanel?.classList.remove('visible');
-    settingsOverlay?.classList.remove('visible');
-  };
-  
-  settingsClose?.addEventListener('click', closeSettings);
-  settingsOverlay?.addEventListener('click', closeSettings);
-  
-  // Theme selection
-  document.querySelectorAll('.theme-option').forEach(opt => {
-    opt.addEventListener('click', () => {
-      settings.theme = opt.dataset.theme;
-      document.querySelectorAll('.theme-option').forEach(o => o.classList.remove('active'));
-      opt.classList.add('active');
-      saveSettings();
-      applySettings();
-    });
-  });
-  
-  // Toggle settings
-  document.querySelectorAll('.toggle-switch[data-setting]').forEach(toggle => {
-    // Set initial state
-    toggle.classList.toggle('active', settings[toggle.dataset.setting]);
-    
-    toggle.addEventListener('click', () => {
-      const setting = toggle.dataset.setting;
-      settings[setting] = !settings[setting];
-      toggle.classList.toggle('active', settings[setting]);
-      saveSettings();
-      applySettings();
-    });
-  });
-  
-  // Escape key to close
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && settingsPanel?.classList.contains('visible')) {
-      closeSettings();
-    }
-  });
-}
-
-
-// === WINDOW MANAGEMENT (TABBED) ===
-
+// === WINDOW MANAGEMENT ===
 const windowsContainer = document.getElementById('windows-container');
 const taskbar = document.getElementById('taskbar');
 const taskbarItems = document.getElementById('taskbar-items');
 
 let openWindows = {};
 let windowZIndex = 200;
-let activeWindowId = null;
 
 function getWindowSize(node) {
-  // Special sizes for certain node types
-  if (node.id === 'home' || node.group === 'core') {
-    return { width: 650, height: 500 };
-  }
-  
-  // Use settings default
-  return windowSizes[settings.defaultWindowSize] || windowSizes.medium;
+  if (node.id === 'home' || node.group === 'core') return { width: 650, height: 500 };
+  return { width: 550, height: 450 };
 }
 
 async function createWindow(node, openAsTab = false, targetWindowId = null) {
-  // If openAsTab is true and we have a target window, add tab to that window
   if (openAsTab && targetWindowId && openWindows[targetWindowId]) {
     return addTabToWindow(targetWindowId, node);
   }
   
-  // Check if node already has a tab somewhere
   for (const [windowId, win] of Object.entries(openWindows)) {
     const existingTab = win.tabs.find(t => t.node.id === node.id);
     if (existingTab) {
-      // Switch to that tab and focus window
       switchTab(windowId, existingTab.id);
       restoreWindow(windowId);
       bringToFront(windowId);
@@ -758,7 +284,6 @@ async function createWindow(node, openAsTab = false, targetWindowId = null) {
   const tabId = `tab-${Date.now()}`;
   const size = getWindowSize(node);
   
-  // Create window element
   const windowEl = document.createElement('div');
   windowEl.className = 'content-window';
   windowEl.id = windowId;
@@ -793,28 +318,20 @@ async function createWindow(node, openAsTab = false, targetWindowId = null) {
   
   windowsContainer.appendChild(windowEl);
   
-  // Store window reference with tabs array
   openWindows[windowId] = {
     element: windowEl,
-    tabs: [{
-      id: tabId,
-      node: node,
-      loaded: false
-    }],
+    tabs: [{ id: tabId, node: node, loaded: false }],
     activeTabId: tabId,
     minimized: false,
     maximized: false
   };
   
-  // Setup event listeners
   setupWindowDrag(windowEl, windowId);
   setupWindowResize(windowEl);
   setupWindowControls(windowEl, windowId);
-  
   windowEl.addEventListener('mousedown', () => bringToFront(windowId));
   bringToFront(windowId);
   
-  // Load content for the tab
   await loadTabContent(windowId, tabId);
 }
 
@@ -822,24 +339,12 @@ async function addTabToWindow(windowId, node) {
   const win = openWindows[windowId];
   if (!win) return;
   
-  // Check if node already has a tab in this window
   const existingTab = win.tabs.find(t => t.node.id === node.id);
-  if (existingTab) {
-    switchTab(windowId, existingTab.id);
-    return;
-  }
+  if (existingTab) { switchTab(windowId, existingTab.id); return; }
   
-  const cluster = clusters[node.group];
   const tabId = `tab-${Date.now()}`;
+  win.tabs.push({ id: tabId, node: node, loaded: false });
   
-  // Add tab data
-  win.tabs.push({
-    id: tabId,
-    node: node,
-    loaded: false
-  });
-  
-  // Add tab content container
   const tabsContent = win.element.querySelector('.window-tabs-content');
   const tabContentEl = document.createElement('div');
   tabContentEl.className = 'tab-content';
@@ -847,13 +352,8 @@ async function addTabToWindow(windowId, node) {
   tabContentEl.innerHTML = '<div class="loading">Loading content...</div>';
   tabsContent.appendChild(tabContentEl);
   
-  // Update tabs UI
   updateWindowTabs(windowId);
-  
-  // Switch to new tab
   switchTab(windowId, tabId);
-  
-  // Load content
   await loadTabContent(windowId, tabId);
 }
 
@@ -874,7 +374,6 @@ async function loadTabContent(windowId, tabId) {
       const html = await fetchNodeContent(node.pageId);
       contentEl.innerHTML = `<h1>${node.name}</h1>${html}`;
     } catch (error) {
-      console.error('Failed to load content:', error);
       contentEl.innerHTML = `<h1>${node.name}</h1><p>${node.description || 'Failed to load content.'}</p>`;
     }
   } else {
@@ -882,8 +381,6 @@ async function loadTabContent(windowId, tabId) {
   }
   
   tab.loaded = true;
-  
-  // Setup node links with middle-click support
   setupNodeLinks(win.element, windowId);
 }
 
@@ -898,37 +395,28 @@ function updateWindowTabs(windowId) {
     tabsContainer.innerHTML = win.tabs.map(tab => {
       const cluster = clusters[tab.node.group];
       const isActive = tab.id === win.activeTabId;
-      return `
-        <div class="window-tab ${isActive ? 'active' : ''}" data-tab-id="${tab.id}">
-          <span class="tab-dot" style="background: ${cluster?.color || '#6366f1'}"></span>
-          <span class="tab-title">${tab.node.name}</span>
-          <button class="tab-close" title="Close tab">×</button>
-        </div>
-      `;
+      return `<div class="window-tab ${isActive ? 'active' : ''}" data-tab-id="${tab.id}">
+        <span class="tab-dot" style="background: ${cluster?.color || '#6366f1'}"></span>
+        <span class="tab-title">${tab.node.name}</span>
+        <button class="tab-close" title="Close tab">×</button>
+      </div>`;
     }).join('');
     
-    // Setup tab click handlers
     tabsContainer.querySelectorAll('.window-tab').forEach(tabEl => {
       tabEl.addEventListener('click', (e) => {
-        if (e.target.classList.contains('tab-close')) {
-          closeTab(windowId, tabEl.dataset.tabId);
-        } else {
-          switchTab(windowId, tabEl.dataset.tabId);
-        }
+        if (e.target.classList.contains('tab-close')) closeTab(windowId, tabEl.dataset.tabId);
+        else switchTab(windowId, tabEl.dataset.tabId);
       });
     });
   } else {
     tabsContainer.classList.remove('visible');
-    tabsContainer.innerHTML = '';
   }
   
-  // Update window title to show active tab
   const activeTab = win.tabs.find(t => t.id === win.activeTabId);
   if (activeTab) {
     const titleText = win.element.querySelector('.window-title-text');
     const titleDot = win.element.querySelector('.window-title-dot');
     const cluster = clusters[activeTab.node.group];
-    
     if (titleText) titleText.textContent = activeTab.node.name;
     if (titleDot) titleDot.style.background = cluster?.color || '#6366f1';
   }
@@ -939,43 +427,27 @@ function switchTab(windowId, tabId) {
   if (!win) return;
   
   win.activeTabId = tabId;
-  
-  // Update tab content visibility
   win.element.querySelectorAll('.tab-content').forEach(content => {
     content.classList.toggle('active', content.dataset.tabId === tabId);
   });
-  
-  // Update tab bar
   updateWindowTabs(windowId);
   
-  // Update background color based on active tab's cluster
   const activeTab = win.tabs.find(t => t.id === tabId);
-  if (activeTab) {
-    updateBackground(activeTab.node.group);
-  }
+  if (activeTab) updateBackground(activeTab.node.group);
 }
 
 function closeTab(windowId, tabId) {
   const win = openWindows[windowId];
   if (!win) return;
   
-  // If only one tab, close the window
-  if (win.tabs.length === 1) {
-    closeWindow(windowId);
-    return;
-  }
+  if (win.tabs.length === 1) { closeWindow(windowId); return; }
   
-  // Find and remove the tab
   const tabIndex = win.tabs.findIndex(t => t.id === tabId);
   if (tabIndex === -1) return;
   
   win.tabs.splice(tabIndex, 1);
+  win.element.querySelector(`.tab-content[data-tab-id="${tabId}"]`)?.remove();
   
-  // Remove tab content
-  const contentEl = win.element.querySelector(`.tab-content[data-tab-id="${tabId}"]`);
-  contentEl?.remove();
-  
-  // If we closed the active tab, switch to another
   if (win.activeTabId === tabId) {
     const newActiveTab = win.tabs[Math.max(0, tabIndex - 1)];
     switchTab(windowId, newActiveTab.id);
@@ -992,38 +464,27 @@ function setupWindowDrag(windowEl, windowId) {
   header.addEventListener('mousedown', (e) => {
     if (e.target.tagName === 'BUTTON') return;
     if (openWindows[windowId]?.maximized) return;
-    
     isDragging = true;
     startX = e.clientX;
     startY = e.clientY;
     startLeft = windowEl.offsetLeft;
     startTop = windowEl.offsetTop;
-    
     header.style.cursor = 'grabbing';
   });
   
   document.addEventListener('mousemove', (e) => {
     if (!isDragging) return;
-    
-    const dx = e.clientX - startX;
-    const dy = e.clientY - startY;
-    
-    windowEl.style.left = `${startLeft + dx}px`;
-    windowEl.style.top = `${startTop + dy}px`;
+    windowEl.style.left = `${startLeft + e.clientX - startX}px`;
+    windowEl.style.top = `${startTop + e.clientY - startY}px`;
   });
   
   document.addEventListener('mouseup', () => {
-    if (isDragging) {
-      isDragging = false;
-      header.style.cursor = 'grab';
-    }
+    if (isDragging) { isDragging = false; header.style.cursor = 'grab'; }
   });
 }
 
 function setupWindowResize(windowEl) {
-  const handles = windowEl.querySelectorAll('.resize-handle');
-  
-  handles.forEach(handle => {
+  windowEl.querySelectorAll('.resize-handle').forEach(handle => {
     let isResizing = false;
     let startX, startY, startWidth, startHeight;
     
@@ -1033,23 +494,14 @@ function setupWindowResize(windowEl) {
       startY = e.clientY;
       startWidth = windowEl.offsetWidth;
       startHeight = windowEl.offsetHeight;
-      
       e.preventDefault();
-      e.stopPropagation();
       
       const onMouseMove = (e) => {
         if (!isResizing) return;
-        
-        const dx = e.clientX - startX;
-        const dy = e.clientY - startY;
-        
-        if (handle.classList.contains('right') || handle.classList.contains('corner')) {
-          windowEl.style.width = `${Math.max(300, startWidth + dx)}px`;
-        }
-        
-        if (handle.classList.contains('bottom') || handle.classList.contains('corner')) {
-          windowEl.style.height = `${Math.max(200, startHeight + dy)}px`;
-        }
+        if (handle.classList.contains('right') || handle.classList.contains('corner'))
+          windowEl.style.width = `${Math.max(300, startWidth + e.clientX - startX)}px`;
+        if (handle.classList.contains('bottom') || handle.classList.contains('corner'))
+          windowEl.style.height = `${Math.max(200, startHeight + e.clientY - startY)}px`;
       };
       
       const onMouseUp = () => {
@@ -1065,90 +517,54 @@ function setupWindowResize(windowEl) {
 }
 
 function setupWindowControls(windowEl, windowId) {
-  const minimizeBtn = windowEl.querySelector('.minimize-btn');
-  const maximizeBtn = windowEl.querySelector('.maximize-btn');
-  const closeBtn = windowEl.querySelector('.close-btn');
-  
-  minimizeBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    minimizeWindow(windowId);
-  });
-  
-  maximizeBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    toggleMaximize(windowId);
-  });
-  
-  closeBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    closeWindow(windowId);
-  });
+  windowEl.querySelector('.minimize-btn').addEventListener('click', (e) => { e.stopPropagation(); minimizeWindow(windowId); });
+  windowEl.querySelector('.maximize-btn').addEventListener('click', (e) => { e.stopPropagation(); toggleMaximize(windowId); });
+  windowEl.querySelector('.close-btn').addEventListener('click', (e) => { e.stopPropagation(); closeWindow(windowId); });
 }
 
 function setupNodeLinks(windowEl, windowId) {
-  const nodeLinks = windowEl.querySelectorAll('.node-link');
-  
-  nodeLinks.forEach(link => {
-    // Remove existing listeners by cloning
+  windowEl.querySelectorAll('.node-link').forEach(link => {
     const newLink = link.cloneNode(true);
     link.parentNode.replaceChild(newLink, link);
     
-    // Left click - new window or tab based on settings
     newLink.addEventListener('click', (e) => {
       e.preventDefault();
-      const targetNodeId = newLink.dataset.node;
-      const targetNode = graphData.nodes.find(n => n.id === targetNodeId);
-      
+      const targetNode = graphData.nodes.find(n => n.id === newLink.dataset.node);
       if (targetNode) {
-        if (settings.openInTabs && windowId) {
-          addTabToWindow(windowId, targetNode);
-        } else {
-          createWindow(targetNode);
-        }
+        if (settings.openInTabs && windowId) addTabToWindow(windowId, targetNode);
+        else createWindow(targetNode);
         updateBackground(targetNode.group);
         focusOnNode(targetNode);
       }
     });
     
-    // Middle click - always open as tab in current window
     newLink.addEventListener('auxclick', (e) => {
-      if (e.button === 1) { // Middle click
+      if (e.button === 1) {
         e.preventDefault();
-        const targetNodeId = newLink.dataset.node;
-        const targetNode = graphData.nodes.find(n => n.id === targetNodeId);
-        
-        if (targetNode && windowId) {
-          addTabToWindow(windowId, targetNode);
-        }
+        const targetNode = graphData.nodes.find(n => n.id === newLink.dataset.node);
+        if (targetNode && windowId) addTabToWindow(windowId, targetNode);
       }
     });
   });
 }
 
 function bringToFront(windowId) {
-  if (openWindows[windowId]) {
-    openWindows[windowId].element.style.zIndex = ++windowZIndex;
-    activeWindowId = windowId;
-  }
+  if (openWindows[windowId]) openWindows[windowId].element.style.zIndex = ++windowZIndex;
 }
 
 function minimizeWindow(windowId) {
   const win = openWindows[windowId];
   if (!win) return;
-  
   win.minimized = true;
   win.element.classList.add('minimized');
-  
   updateTaskbar();
 }
 
 function restoreWindow(windowId) {
   const win = openWindows[windowId];
   if (!win) return;
-  
   win.minimized = false;
   win.element.classList.remove('minimized');
-  
   updateTaskbar();
   bringToFront(windowId);
 }
@@ -1156,21 +572,16 @@ function restoreWindow(windowId) {
 function toggleMaximize(windowId) {
   const win = openWindows[windowId];
   if (!win) return;
-  
   win.maximized = !win.maximized;
   win.element.classList.toggle('maximized');
-  
-  const btn = win.element.querySelector('.maximize-btn');
-  btn.textContent = win.maximized ? '❐' : '□';
+  win.element.querySelector('.maximize-btn').textContent = win.maximized ? '❐' : '□';
 }
 
 function closeWindow(windowId) {
   const win = openWindows[windowId];
   if (!win) return;
-  
   win.element.remove();
   delete openWindows[windowId];
-  
   updateTaskbar();
 }
 
@@ -1179,236 +590,326 @@ function updateTaskbar() {
   
   if (minimizedWindows.length > 0) {
     taskbar.classList.add('visible');
-    
     taskbarItems.innerHTML = minimizedWindows.map(([id, win]) => {
-      // Get the active tab's info for display
       const activeTab = win.tabs.find(t => t.id === win.activeTabId);
       const node = activeTab?.node || win.tabs[0]?.node;
       const cluster = clusters[node?.group];
       const tabCount = win.tabs.length > 1 ? ` (${win.tabs.length})` : '';
-      
-      return `
-        <div class="taskbar-item" data-window-id="${id}">
-          <span class="dot" style="background: ${cluster?.color || '#6366f1'}"></span>
-          ${node?.name || 'Window'}${tabCount}
-        </div>
-      `;
+      return `<div class="taskbar-item" data-window-id="${id}">
+        <span class="dot" style="background: ${cluster?.color || '#6366f1'}"></span>
+        ${node?.name || 'Window'}${tabCount}
+      </div>`;
     }).join('');
     
     taskbarItems.querySelectorAll('.taskbar-item').forEach(item => {
-      item.addEventListener('click', () => {
-        restoreWindow(item.dataset.windowId);
-      });
+      item.addEventListener('click', () => restoreWindow(item.dataset.windowId));
     });
   } else {
     taskbar.classList.remove('visible');
   }
 }
 
-// Start the app
-init();
-initSettings();
+// === MINIMAP ===
+function initMinimap() {
+  const minimapEl = document.getElementById('minimap');
+  const minimapContainer = document.getElementById('minimap-container');
+  const cameraIndicator = document.getElementById('camera-indicator');
+  const minimapHeader = document.getElementById('minimap-header');
+  
+  if (!minimapEl || !Graph) return;
+  
+  let minimapScale = 0.15;
+  let minimapOffset = { x: 0, y: 0 };
+  
+  const canvas = document.createElement('canvas');
+  canvas.width = 180;
+  canvas.height = 152;
+  minimapEl.appendChild(canvas);
+  const ctx = canvas.getContext('2d');
+  
+  function updateMinimap() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+    
+    graphData.links.forEach(link => {
+      const source = typeof link.source === 'object' ? link.source : graphData.nodes.find(n => n.id === link.source);
+      const target = typeof link.target === 'object' ? link.target : graphData.nodes.find(n => n.id === link.target);
+      if (source?.x && target?.x) {
+        ctx.beginPath();
+        ctx.moveTo(centerX + (source.x + minimapOffset.x) * minimapScale, centerY + (source.y + minimapOffset.y) * minimapScale);
+        ctx.lineTo(centerX + (target.x + minimapOffset.x) * minimapScale, centerY + (target.y + minimapOffset.y) * minimapScale);
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+        ctx.stroke();
+      }
+    });
+    
+    graphData.nodes.forEach(node => {
+      if (node.x === undefined) return;
+      const x = centerX + (node.x + minimapOffset.x) * minimapScale;
+      const y = centerY + (node.y + minimapOffset.y) * minimapScale;
+      const cluster = clusters[node.group];
+      ctx.beginPath();
+      ctx.arc(x, y, 3, 0, Math.PI * 2);
+      ctx.fillStyle = cluster?.color || '#6366f1';
+      ctx.fill();
+    });
+    
+    const camera = Graph.camera();
+    const camX = centerX + (camera.position.x * 0.1 + minimapOffset.x) * minimapScale;
+    const camY = centerY + (camera.position.y * 0.1 + minimapOffset.y) * minimapScale;
+    cameraIndicator.style.left = `${camX + 10}px`;
+    cameraIndicator.style.top = `${camY + 28}px`;
+    
+    requestAnimationFrame(updateMinimap);
+  }
+  
+  updateMinimap();
+  
+  document.getElementById('minimap-zoom-in')?.addEventListener('click', () => { minimapScale = Math.min(0.5, minimapScale * 1.2); });
+  document.getElementById('minimap-zoom-out')?.addEventListener('click', () => { minimapScale = Math.max(0.05, minimapScale / 1.2); });
+  
+  canvas.addEventListener('click', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) - canvas.width / 2) / minimapScale - minimapOffset.x;
+    const y = ((e.clientY - rect.top) - canvas.height / 2) / minimapScale - minimapOffset.y;
+    
+    let closestNode = null;
+    let closestDist = Infinity;
+    graphData.nodes.forEach(node => {
+      if (node.x === undefined) return;
+      const dist = Math.hypot(node.x - x, node.y - y);
+      if (dist < closestDist) { closestDist = dist; closestNode = node; }
+    });
+    
+    if (closestNode && closestDist < 50) {
+      focusOnNode(closestNode);
+      updateBackground(closestNode.group);
+    }
+  });
+  
+  let isDragging = false;
+  let dragOffset = { x: 0, y: 0 };
+  
+  minimapHeader?.addEventListener('mousedown', (e) => {
+    if (e.target.tagName === 'BUTTON') return;
+    isDragging = true;
+    dragOffset.x = e.clientX - minimapContainer.offsetLeft;
+    dragOffset.y = e.clientY - minimapContainer.offsetTop;
+    minimapHeader.style.cursor = 'grabbing';
+  });
+  
+  document.addEventListener('mousemove', (e) => {
+    if (!isDragging) return;
+    minimapContainer.style.left = `${e.clientX - dragOffset.x}px`;
+    minimapContainer.style.top = `${e.clientY - dragOffset.y}px`;
+    minimapContainer.style.right = 'auto';
+    minimapContainer.style.bottom = 'auto';
+  });
+  
+  document.addEventListener('mouseup', () => {
+    if (isDragging) { isDragging = false; minimapHeader.style.cursor = 'grab'; }
+  });
+}
 
+// === MAIN INIT ===
+async function init() {
+  graphContainer.innerHTML = '<div class="loading">Loading graph from Notion...</div>';
+  
+  try {
+    const data = await fetchGraphData();
+    graphData = { nodes: data.nodes, links: data.links };
+    clusters = data.clusters;
+    
+    graphContainer.innerHTML = '';
+    updateBackground('core');
+    
+    Graph = ForceGraph3D({ rendererConfig: { antialias: true, alpha: true } })(graphContainer)
+      .graphData(graphData)
+      .nodeLabel('name')
+      .nodeThreeObject(node => {
+        const baseColor = clusters[node.group]?.color || '#6366f1';
+        const isMatch = !searchQuery || nodeMatchesSearch(node, searchQuery);
+        const geometry = new THREE.SphereGeometry(Math.cbrt(node.weight || 1) * 4, 16, 16);
+        const material = new THREE.MeshLambertMaterial({
+          color: isMatch ? baseColor : '#222222',
+          transparent: true,
+          opacity: isMatch ? 0.9 : 0.15
+        });
+        return new THREE.Mesh(geometry, material);
+      })
+      .nodeThreeObjectExtend(false)
+      .linkColor(link => {
+        const sourceNode = typeof link.source === 'object' ? link.source : graphData.nodes.find(n => n.id === link.source);
+        const cluster = clusters[sourceNode?.group];
+        if (searchQuery) return 'rgba(255, 255, 255, 0.05)';
+        return cluster ? cluster.color + '40' : 'rgba(255, 255, 255, 0.2)';
+      })
+      .linkWidth(1.5)
+      .linkOpacity(0.8)
+      .onNodeClick(node => {
+        createWindow(node);
+        updateBackground(node.group);
+        focusOnNode(node);
+        clearSearch();
+      })
+      .onNodeHover(node => { document.body.style.cursor = node ? 'pointer' : 'default'; })
+      .backgroundColor('rgba(0,0,0,0)');
+    
+    Graph.d3Force('cluster', alpha => {
+      const clusterCenters = {};
+      graphData.nodes.forEach(node => {
+        if (!clusterCenters[node.group]) clusterCenters[node.group] = { x: 0, y: 0, z: 0, count: 0 };
+        clusterCenters[node.group].x += node.x || 0;
+        clusterCenters[node.group].y += node.y || 0;
+        clusterCenters[node.group].z += node.z || 0;
+        clusterCenters[node.group].count++;
+      });
+      
+      Object.keys(clusterCenters).forEach(group => {
+        const c = clusterCenters[group];
+        c.x /= c.count; c.y /= c.count; c.z /= c.count;
+      });
+      
+      graphData.nodes.forEach(node => {
+        const center = clusterCenters[node.group];
+        if (center && node.x !== undefined) {
+          node.vx += (center.x - node.x) * alpha * 0.3;
+          node.vy += (center.y - node.y) * alpha * 0.3;
+          node.vz += (center.z - node.z) * alpha * 0.3;
+        }
+      });
+    });
+    
+    Graph.d3Force('charge').strength(-120);
+    Graph.d3Force('link').distance(50);
+    
+    initSearch();
+    initMinimap();
+    initSettings();
+    initMusicPlayer();
+    
+  } catch (error) {
+    console.error('Failed to initialize graph:', error);
+    graphContainer.innerHTML = '<div class="loading error">Failed to load graph. Please refresh.</div>';
+  }
+}
 
 // === MUSIC PLAYER ===
-
-const musicPlayer = {
-  audio: new Audio(),
-  playlist: [],
-  currentIndex: 0,
-  isPlaying: false,
+function initMusicPlayer() {
+  const audio = new Audio();
+  const playlist = [
+    { title: 'Ambient Track 1', src: '/music/track1.mp3' },
+    { title: 'Ambient Track 2', src: '/music/track2.mp3' }
+  ];
+  let currentIndex = 0;
+  let isPlaying = false;
   
-  // DOM elements
-  playBtn: document.getElementById('play-btn'),
-  prevBtn: document.getElementById('prev-btn'),
-  nextBtn: document.getElementById('next-btn'),
-  trackName: document.getElementById('track-name'),
-  volumeSlider: document.getElementById('volume-slider'),
-  volumeIcon: document.getElementById('volume-icon'),
-  progressBar: document.getElementById('progress-bar'),
-  progressContainer: document.getElementById('progress-container'),
-  playerHeader: document.getElementById('player-header'),
-  playerBody: document.getElementById('player-body'),
-  toggleBtn: document.getElementById('player-toggle-btn'),
-  playerEl: document.getElementById('music-player'),
+  const playBtn = document.getElementById('play-btn');
+  const prevBtn = document.getElementById('prev-btn');
+  const nextBtn = document.getElementById('next-btn');
+  const trackName = document.getElementById('track-name');
+  const volumeSlider = document.getElementById('volume-slider');
+  const volumeIcon = document.getElementById('volume-icon');
+  const progressBar = document.getElementById('progress-bar');
+  const progressContainer = document.getElementById('progress-container');
+  const playerHeader = document.getElementById('player-header');
+  const playerBody = document.getElementById('player-body');
+  const toggleBtn = document.getElementById('player-toggle-btn');
+  const playerEl = document.getElementById('music-player');
   
-  init() {
-    // Default playlist - can be configured
-    this.playlist = [
-      { title: 'Ambient Track 1', src: '/music/track1.mp3' },
-      { title: 'Ambient Track 2', src: '/music/track2.mp3' },
-      { title: 'Ambient Track 3', src: '/music/track3.mp3' }
-    ];
-    
-    // Set initial volume
-    this.audio.volume = 0.5;
-    
-    // Event listeners
-    this.playBtn?.addEventListener('click', () => this.togglePlay());
-    this.prevBtn?.addEventListener('click', () => this.prevTrack());
-    this.nextBtn?.addEventListener('click', () => this.nextTrack());
-    this.volumeSlider?.addEventListener('input', (e) => this.setVolume(e.target.value));
-    this.volumeIcon?.addEventListener('click', () => this.toggleMute());
-    this.progressContainer?.addEventListener('click', (e) => this.seek(e));
-    this.toggleBtn?.addEventListener('click', () => this.toggleCollapse());
-    
-    // Audio events
-    this.audio.addEventListener('timeupdate', () => this.updateProgress());
-    this.audio.addEventListener('ended', () => this.nextTrack());
-    this.audio.addEventListener('error', () => this.handleError());
-    
-    // Draggable player
-    this.initDrag();
-    
-    // Load first track info (don't autoplay)
-    this.updateTrackInfo();
-  },
+  audio.volume = 0.5;
   
-  togglePlay() {
-    if (this.playlist.length === 0) return;
-    
-    if (this.isPlaying) {
-      this.audio.pause();
-      this.isPlaying = false;
-      this.playBtn.textContent = '▶';
-    } else {
-      // Load track if not loaded
-      if (!this.audio.src || this.audio.src === '') {
-        this.loadTrack(this.currentIndex);
-      }
-      this.audio.play().catch(err => {
-        console.log('Playback failed:', err);
-        this.trackName.textContent = 'Add music files to /public/music/';
-      });
-      this.isPlaying = true;
-      this.playBtn.textContent = '⏸';
-    }
-  },
-  
-  loadTrack(index) {
-    if (index < 0 || index >= this.playlist.length) return;
-    
-    this.currentIndex = index;
-    const track = this.playlist[index];
-    this.audio.src = track.src;
-    this.updateTrackInfo();
-  },
-  
-  updateTrackInfo() {
-    if (this.playlist.length === 0) {
-      this.trackName.textContent = 'No tracks found';
-      return;
-    }
-    const track = this.playlist[this.currentIndex];
-    this.trackName.textContent = track.title;
-  },
-  
-  prevTrack() {
-    const newIndex = this.currentIndex > 0 
-      ? this.currentIndex - 1 
-      : this.playlist.length - 1;
-    this.loadTrack(newIndex);
-    if (this.isPlaying) {
-      this.audio.play();
-    }
-  },
-  
-  nextTrack() {
-    const newIndex = this.currentIndex < this.playlist.length - 1 
-      ? this.currentIndex + 1 
-      : 0;
-    this.loadTrack(newIndex);
-    if (this.isPlaying) {
-      this.audio.play();
-    }
-  },
-  
-  setVolume(value) {
-    const volume = value / 100;
-    this.audio.volume = volume;
-    this.updateVolumeIcon(volume);
-  },
-  
-  updateVolumeIcon(volume) {
-    if (volume === 0) {
-      this.volumeIcon.textContent = '🔇';
-    } else if (volume < 0.5) {
-      this.volumeIcon.textContent = '🔉';
-    } else {
-      this.volumeIcon.textContent = '🔊';
-    }
-  },
-  
-  toggleMute() {
-    if (this.audio.volume > 0) {
-      this.lastVolume = this.audio.volume;
-      this.audio.volume = 0;
-      this.volumeSlider.value = 0;
-    } else {
-      this.audio.volume = this.lastVolume || 0.5;
-      this.volumeSlider.value = this.audio.volume * 100;
-    }
-    this.updateVolumeIcon(this.audio.volume);
-  },
-  
-  updateProgress() {
-    if (this.audio.duration) {
-      const percent = (this.audio.currentTime / this.audio.duration) * 100;
-      this.progressBar.style.width = `${percent}%`;
-    }
-  },
-  
-  seek(e) {
-    if (!this.audio.duration) return;
-    const rect = this.progressContainer.getBoundingClientRect();
-    const percent = (e.clientX - rect.left) / rect.width;
-    this.audio.currentTime = percent * this.audio.duration;
-  },
-  
-  toggleCollapse() {
-    this.playerBody.classList.toggle('collapsed');
-    this.toggleBtn.textContent = this.playerBody.classList.contains('collapsed') ? '+' : '−';
-  },
-  
-  handleError() {
-    console.log('Audio error - track may not exist');
-    this.trackName.textContent = 'Track not found';
-  },
-  
-  initDrag() {
-    let isDragging = false;
-    let offset = { x: 0, y: 0 };
-    
-    this.playerHeader?.addEventListener('mousedown', (e) => {
-      if (e.target.tagName === 'BUTTON') return;
-      isDragging = true;
-      offset.x = e.clientX - this.playerEl.offsetLeft;
-      offset.y = e.clientY - this.playerEl.offsetTop;
-      this.playerHeader.style.cursor = 'grabbing';
-    });
-    
-    document.addEventListener('mousemove', (e) => {
-      if (!isDragging) return;
-      this.playerEl.style.left = `${e.clientX - offset.x}px`;
-      this.playerEl.style.top = `${e.clientY - offset.y}px`;
-      this.playerEl.style.right = 'auto';
-    });
-    
-    document.addEventListener('mouseup', () => {
-      if (isDragging) {
-        isDragging = false;
-        this.playerHeader.style.cursor = 'grab';
-      }
-    });
-  },
-  
-  // Method to set playlist dynamically
-  setPlaylist(tracks) {
-    this.playlist = tracks;
-    this.currentIndex = 0;
-    this.updateTrackInfo();
+  function updateTrackInfo() {
+    if (playlist.length === 0) { trackName.textContent = 'No tracks found'; return; }
+    trackName.textContent = playlist[currentIndex].title;
   }
-};
+  
+  function loadTrack(index) {
+    if (index < 0 || index >= playlist.length) return;
+    currentIndex = index;
+    audio.src = playlist[index].src;
+    updateTrackInfo();
+  }
+  
+  updateTrackInfo();
+  
+  playBtn?.addEventListener('click', () => {
+    if (isPlaying) {
+      audio.pause();
+      isPlaying = false;
+      playBtn.textContent = '▶';
+    } else {
+      if (!audio.src) loadTrack(0);
+      audio.play().catch(() => { trackName.textContent = 'Add music to /public/music/'; });
+      isPlaying = true;
+      playBtn.textContent = '⏸';
+    }
+  });
+  
+  prevBtn?.addEventListener('click', () => {
+    loadTrack(currentIndex > 0 ? currentIndex - 1 : playlist.length - 1);
+    if (isPlaying) audio.play();
+  });
+  
+  nextBtn?.addEventListener('click', () => {
+    loadTrack(currentIndex < playlist.length - 1 ? currentIndex + 1 : 0);
+    if (isPlaying) audio.play();
+  });
+  
+  volumeSlider?.addEventListener('input', (e) => {
+    audio.volume = e.target.value / 100;
+    volumeIcon.textContent = audio.volume === 0 ? '🔇' : audio.volume < 0.5 ? '🔉' : '🔊';
+  });
+  
+  let lastVolume = 0.5;
+  volumeIcon?.addEventListener('click', () => {
+    if (audio.volume > 0) { lastVolume = audio.volume; audio.volume = 0; volumeSlider.value = 0; }
+    else { audio.volume = lastVolume; volumeSlider.value = audio.volume * 100; }
+    volumeIcon.textContent = audio.volume === 0 ? '🔇' : audio.volume < 0.5 ? '🔉' : '🔊';
+  });
+  
+  audio.addEventListener('timeupdate', () => {
+    if (audio.duration) progressBar.style.width = `${(audio.currentTime / audio.duration) * 100}%`;
+  });
+  
+  audio.addEventListener('ended', () => {
+    loadTrack(currentIndex < playlist.length - 1 ? currentIndex + 1 : 0);
+    audio.play();
+  });
+  
+  progressContainer?.addEventListener('click', (e) => {
+    if (!audio.duration) return;
+    const rect = progressContainer.getBoundingClientRect();
+    audio.currentTime = ((e.clientX - rect.left) / rect.width) * audio.duration;
+  });
+  
+  toggleBtn?.addEventListener('click', () => {
+    playerBody.classList.toggle('collapsed');
+    toggleBtn.textContent = playerBody.classList.contains('collapsed') ? '+' : '−';
+  });
+  
+  let isDragging = false;
+  let offset = { x: 0, y: 0 };
+  
+  playerHeader?.addEventListener('mousedown', (e) => {
+    if (e.target.tagName === 'BUTTON') return;
+    isDragging = true;
+    offset.x = e.clientX - playerEl.offsetLeft;
+    offset.y = e.clientY - playerEl.offsetTop;
+    playerHeader.style.cursor = 'grabbing';
+  });
+  
+  document.addEventListener('mousemove', (e) => {
+    if (!isDragging) return;
+    playerEl.style.left = `${e.clientX - offset.x}px`;
+    playerEl.style.top = `${e.clientY - offset.y}px`;
+    playerEl.style.right = 'auto';
+  });
+  
+  document.addEventListener('mouseup', () => {
+    if (isDragging) { isDragging = false; playerHeader.style.cursor = 'grab'; }
+  });
+}
 
-// Initialize music player
-musicPlayer.init();
+init();

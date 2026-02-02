@@ -16,7 +16,6 @@
       overflow: hidden;
     }
 
-    /* Gradient background */
     #gradient-bg {
       position: fixed;
       top: 0;
@@ -35,7 +34,6 @@
       z-index: 1;
     }
 
-    /* === LOADING STATES === */
     .loading {
       display: flex;
       align-items: center;
@@ -57,19 +55,14 @@
       animation: spin 1s linear infinite;
     }
 
-    .loading.error {
-      color: #f87171;
-    }
-
-    .loading.error::before {
-      display: none;
-    }
+    .loading.error { color: #f87171; }
+    .loading.error::before { display: none; }
 
     @keyframes spin {
       to { transform: rotate(360deg); }
     }
 
-    /* === SEARCH BAR === */
+    /* Search */
     #search-container {
       position: fixed;
       top: 20px;
@@ -81,8 +74,7 @@
 
     #search-input {
       width: 100%;
-      padding: 12px 16px;
-      padding-left: 40px;
+      padding: 12px 16px 12px 40px;
       background: rgba(10, 10, 15, 0.85);
       border: 1px solid rgba(255, 255, 255, 0.15);
       border-radius: 10px;
@@ -90,17 +82,10 @@
       font-size: 14px;
       outline: none;
       backdrop-filter: blur(10px);
-      transition: border-color 0.2s, box-shadow 0.2s;
     }
 
-    #search-input::placeholder {
-      color: rgba(255, 255, 255, 0.4);
-    }
-
-    #search-input:focus {
-      border-color: rgba(255, 255, 255, 0.3);
-      box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
-    }
+    #search-input::placeholder { color: rgba(255, 255, 255, 0.4); }
+    #search-input:focus { border-color: rgba(255, 255, 255, 0.3); }
 
     #search-icon {
       position: absolute;
@@ -109,10 +94,8 @@
       transform: translateY(-50%);
       color: rgba(255, 255, 255, 0.4);
       pointer-events: none;
-      font-size: 14px;
     }
 
-    /* Search results dropdown */
     #search-results {
       position: absolute;
       top: 100%;
@@ -122,105 +105,23 @@
       background: rgba(10, 10, 15, 0.95);
       border: 1px solid rgba(255, 255, 255, 0.1);
       border-radius: 10px;
-      overflow: hidden;
       display: none;
       backdrop-filter: blur(10px);
     }
 
-    #search-results.visible {
-      display: block;
-    }
+    #search-results.visible { display: block; }
 
     .search-result-item {
       padding: 12px 16px;
       cursor: pointer;
       border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-      transition: background 0.15s;
     }
 
-    .search-result-item:last-child {
-      border-bottom: none;
-    }
-
-    .search-result-item:hover {
-      background: rgba(255, 255, 255, 0.1);
-    }
-
-    .search-result-item .name {
-      font-weight: 500;
-      margin-bottom: 2px;
-    }
-
-    .search-result-item .cluster {
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      opacity: 0.5;
-    }
-
-    .search-no-results {
-      padding: 12px 16px;
-      color: rgba(255, 255, 255, 0.4);
-      font-size: 13px;
-    }
-
-    /* === INFO PANEL === */
-    #info-panel {
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      width: 320px;
-      max-height: 80vh;
-      background: rgba(10, 10, 15, 0.9);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 12px;
-      padding: 24px;
-      display: none;
-      overflow-y: auto;
-      backdrop-filter: blur(10px);
-      z-index: 100;
-    }
-
-    #info-panel.visible {
-      display: block;
-    }
-
-    #info-panel h2 {
-      margin-bottom: 8px;
-      transition: color 0.3s ease;
-    }
-
-    #info-panel p {
-      line-height: 1.6;
-      color: #aaa;
-    }
-
-    #info-panel .close-btn {
-      position: absolute;
-      top: 12px;
-      right: 12px;
-      background: none;
-      border: none;
-      color: #666;
-      font-size: 20px;
-      cursor: pointer;
-    }
-
-    #info-panel .close-btn:hover {
-      color: #fff;
-    }
-
-    #panel-cluster {
-      display: inline-block;
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      padding: 4px 10px;
-      border: 1px solid #666;
-      border-radius: 20px;
-      margin-bottom: 16px;
-      transition: all 0.3s ease;
-    }
+    .search-result-item:last-child { border-bottom: none; }
+    .search-result-item:hover { background: rgba(255, 255, 255, 0.1); }
+    .search-result-item .name { font-weight: 500; margin-bottom: 2px; }
+    .search-result-item .cluster { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.5; }
+    .search-no-results { padding: 12px 16px; color: rgba(255, 255, 255, 0.4); font-size: 13px; }
 
     /* Cluster indicator */
     #cluster-indicator {
@@ -231,7 +132,6 @@
       text-transform: uppercase;
       letter-spacing: 2px;
       font-weight: 600;
-      transition: color 0.5s ease;
       z-index: 100;
       text-shadow: 0 2px 10px rgba(0,0,0,0.5);
     }
@@ -249,7 +149,7 @@
       z-index: 100;
     }
 
-    /* === MINIMAP === */
+    /* Minimap */
     #minimap-container {
       position: fixed;
       bottom: 20px;
@@ -270,19 +170,11 @@
       letter-spacing: 2px;
       color: rgba(255, 255, 255, 0.4);
       border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-      user-select: none;
       cursor: grab;
     }
 
-    #minimap {
-      width: 100%;
-      height: calc(100% - 28px);
-    }
-
-    #minimap canvas {
-      width: 100% !important;
-      height: 100% !important;
-    }
+    #minimap { width: 100%; height: calc(100% - 28px); }
+    #minimap canvas { width: 100% !important; height: 100% !important; }
 
     #camera-indicator {
       position: absolute;
@@ -297,11 +189,7 @@
       z-index: 10;
     }
 
-    #minimap-controls {
-      display: inline-flex;
-      gap: 4px;
-      float: right;
-    }
+    #minimap-controls { display: inline-flex; gap: 4px; float: right; }
 
     #minimap-controls button {
       width: 20px;
@@ -311,17 +199,13 @@
       border-radius: 4px;
       color: rgba(255, 255, 255, 0.7);
       font-size: 14px;
-      line-height: 1;
       cursor: pointer;
       padding: 0;
     }
 
-    #minimap-controls button:hover {
-      background: rgba(255, 255, 255, 0.2);
-      color: #fff;
-    }
+    #minimap-controls button:hover { background: rgba(255, 255, 255, 0.2); color: #fff; }
 
-    /* === CONTENT WINDOWS === */
+    /* Windows */
     #windows-container {
       position: fixed;
       top: 0;
@@ -347,10 +231,7 @@
       overflow: hidden;
     }
 
-    .content-window.minimized {
-      display: none;
-    }
-
+    .content-window.minimized { display: none; }
     .content-window.maximized {
       width: 100vw !important;
       height: calc(100vh - 50px) !important;
@@ -370,9 +251,7 @@
       user-select: none;
     }
 
-    .window-header:active {
-      cursor: grabbing;
-    }
+    .window-header:active { cursor: grabbing; }
 
     .window-title {
       font-size: 14px;
@@ -383,16 +262,8 @@
       gap: 10px;
     }
 
-    .window-title-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-    }
-
-    .window-controls {
-      display: flex;
-      gap: 8px;
-    }
+    .window-title-dot { width: 8px; height: 8px; border-radius: 50%; }
+    .window-controls { display: flex; gap: 8px; }
 
     .window-controls button {
       width: 24px;
@@ -406,21 +277,61 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: background 0.15s, color 0.15s;
     }
 
-    .window-controls button:hover {
-      background: rgba(255, 255, 255, 0.2);
-      color: #fff;
+    .window-controls button:hover { background: rgba(255, 255, 255, 0.2); color: #fff; }
+    .window-controls .close-btn:hover { background: #e53935; }
+
+    /* Tabs */
+    .window-tabs {
+      display: none;
+      background: rgba(0, 0, 0, 0.3);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 4px 8px 0;
+      overflow-x: auto;
     }
 
-    .window-controls .close-btn:hover {
-      background: #e53935;
-      color: #fff;
+    .window-tabs.visible { display: flex; gap: 2px; }
+
+    .window-tab {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 12px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-bottom: none;
+      border-radius: 6px 6px 0 0;
+      color: rgba(255, 255, 255, 0.6);
+      font-size: 12px;
+      cursor: pointer;
+      max-width: 150px;
     }
 
-    .window-content,
+    .window-tab:hover { background: rgba(255, 255, 255, 0.1); color: rgba(255, 255, 255, 0.8); }
+    .window-tab.active { background: rgba(255, 255, 255, 0.1); color: #fff; border-color: rgba(255, 255, 255, 0.2); }
+    .window-tab .tab-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+    .window-tab .tab-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    .window-tab .tab-close {
+      width: 16px;
+      height: 16px;
+      border: none;
+      background: transparent;
+      color: rgba(255, 255, 255, 0.4);
+      font-size: 14px;
+      cursor: pointer;
+      border-radius: 3px;
+      opacity: 0;
+    }
+
+    .window-tab:hover .tab-close { opacity: 1; }
+    .window-tab .tab-close:hover { background: rgba(255, 255, 255, 0.2); color: #fff; }
+
+    .window-tabs-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
     .tab-content {
+      display: none;
       flex: 1;
       padding: 20px;
       overflow-y: auto;
@@ -428,65 +339,18 @@
       line-height: 1.7;
     }
 
-    .tab-content {
-      display: none;
-    }
+    .tab-content.active { display: block; }
 
-    .tab-content.active {
-      display: block;
-    }
+    .tab-content h1 { font-size: 24px; color: #fff; margin-bottom: 16px; }
+    .tab-content h2 { font-size: 20px; color: #fff; margin-top: 24px; margin-bottom: 12px; }
+    .tab-content h3 { font-size: 16px; color: #fff; margin-top: 20px; margin-bottom: 10px; }
+    .tab-content p { margin-bottom: 14px; }
+    .tab-content ul, .tab-content ol { margin: 12px 0; padding-left: 24px; }
+    .tab-content li { margin-bottom: 6px; }
+    .tab-content a { color: #6366f1; text-decoration: none; }
+    .tab-content a:hover { text-decoration: underline; }
 
-    .window-content h1,
-    .tab-content h1 {
-      font-size: 24px;
-      color: #fff;
-      margin-bottom: 16px;
-    }
-
-    .window-content h2 {
-      font-size: 20px;
-      color: #fff;
-      margin-top: 24px;
-      margin-bottom: 12px;
-    }
-
-    .window-content h3 {
-      font-size: 16px;
-      color: #fff;
-      margin-top: 20px;
-      margin-bottom: 10px;
-    }
-
-    .window-content h4 {
-      font-size: 14px;
-      color: #ddd;
-      margin-top: 16px;
-      margin-bottom: 8px;
-    }
-
-    .window-content p {
-      margin-bottom: 14px;
-    }
-
-    .window-content ul, .window-content ol {
-      margin: 12px 0;
-      padding-left: 24px;
-    }
-
-    .window-content li {
-      margin-bottom: 6px;
-    }
-
-    .window-content a {
-      color: #6366f1;
-      text-decoration: none;
-    }
-
-    .window-content a:hover {
-      text-decoration: underline;
-    }
-
-    .window-content a.node-link {
+    .tab-content a.node-link {
       color: inherit;
       background: rgba(255, 255, 255, 0.1);
       padding: 2px 8px;
@@ -494,20 +358,17 @@
       border: 1px solid rgba(255, 255, 255, 0.2);
     }
 
-    .window-content a.node-link:hover {
-      background: rgba(255, 255, 255, 0.2);
-      text-decoration: none;
-    }
+    .tab-content a.node-link:hover { background: rgba(255, 255, 255, 0.2); text-decoration: none; }
 
-    .window-content code {
+    .tab-content code {
       background: rgba(255, 255, 255, 0.1);
       padding: 2px 6px;
       border-radius: 4px;
-      font-family: 'Fira Code', 'Consolas', monospace;
+      font-family: 'Fira Code', monospace;
       font-size: 0.9em;
     }
 
-    .window-content pre {
+    .tab-content pre {
       background: rgba(0, 0, 0, 0.3);
       padding: 16px;
       border-radius: 8px;
@@ -515,12 +376,9 @@
       margin: 16px 0;
     }
 
-    .window-content pre code {
-      background: none;
-      padding: 0;
-    }
+    .tab-content pre code { background: none; padding: 0; }
 
-    .window-content blockquote {
+    .tab-content blockquote {
       border-left: 3px solid rgba(255, 255, 255, 0.3);
       padding-left: 16px;
       margin: 16px 0;
@@ -528,29 +386,12 @@
       font-style: italic;
     }
 
-    .window-content hr {
-      border: none;
-      border-top: 1px solid rgba(255, 255, 255, 0.1);
-      margin: 24px 0;
-    }
+    .tab-content hr { border: none; border-top: 1px solid rgba(255, 255, 255, 0.1); margin: 24px 0; }
+    .tab-content figure { margin: 20px 0; }
+    .tab-content figure img { max-width: 100%; border-radius: 8px; }
+    .tab-content figcaption { font-size: 12px; color: #888; text-align: center; margin-top: 8px; }
 
-    .window-content figure {
-      margin: 20px 0;
-    }
-
-    .window-content figure img {
-      max-width: 100%;
-      border-radius: 8px;
-    }
-
-    .window-content figcaption {
-      font-size: 12px;
-      color: #888;
-      text-align: center;
-      margin-top: 8px;
-    }
-
-    .window-content .callout {
+    .tab-content .callout {
       display: flex;
       gap: 12px;
       background: rgba(255, 255, 255, 0.05);
@@ -559,15 +400,10 @@
       margin: 16px 0;
     }
 
-    .window-content .callout-icon {
-      font-size: 20px;
-    }
+    .tab-content .callout-icon { font-size: 20px; }
+    .tab-content .callout-content { flex: 1; }
 
-    .window-content .callout-content {
-      flex: 1;
-    }
-
-    .window-content .bookmark {
+    .tab-content .bookmark {
       display: block;
       background: rgba(255, 255, 255, 0.05);
       padding: 12px 16px;
@@ -576,68 +412,26 @@
       margin: 12px 0;
     }
 
-    .window-content .tech-stack {
+    .tab-content .todo-list { list-style: none; padding-left: 0; }
+
+    .tab-content .todo-item {
       display: flex;
-      flex-wrap: wrap;
+      align-items: flex-start;
       gap: 8px;
-      margin: 16px 0;
+      padding: 6px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
     }
 
-    .window-content .tech-tag {
-      background: rgba(255, 255, 255, 0.1);
-      padding: 4px 12px;
-      border-radius: 20px;
-      font-size: 12px;
-      color: #aaa;
-    }
-
-    .window-content .links-section {
-      margin-top: 20px;
-      padding-top: 16px;
-      border-top: 1px solid rgba(255, 255, 255, 0.1);
-    }
-
-    .window-content .links-section a {
-      display: inline-block;
-      margin-right: 16px;
-      margin-bottom: 8px;
-    }
-
-    .window-content .loading {
-      height: 200px;
-    }
+    .tab-content .todo-item.checked { opacity: 0.5; text-decoration: line-through; }
+    .tab-content .todo-checkbox { font-size: 16px; }
 
     /* Resize handles */
-    .resize-handle {
-      position: absolute;
-      background: transparent;
-    }
+    .resize-handle { position: absolute; background: transparent; }
+    .resize-handle.right { top: 10px; right: 0; width: 6px; height: calc(100% - 20px); cursor: ew-resize; }
+    .resize-handle.bottom { bottom: 0; left: 10px; width: calc(100% - 20px); height: 6px; cursor: ns-resize; }
+    .resize-handle.corner { bottom: 0; right: 0; width: 16px; height: 16px; cursor: nwse-resize; }
 
-    .resize-handle.right {
-      top: 10px;
-      right: 0;
-      width: 6px;
-      height: calc(100% - 20px);
-      cursor: ew-resize;
-    }
-
-    .resize-handle.bottom {
-      bottom: 0;
-      left: 10px;
-      width: calc(100% - 20px);
-      height: 6px;
-      cursor: ns-resize;
-    }
-
-    .resize-handle.corner {
-      bottom: 0;
-      right: 0;
-      width: 16px;
-      height: 16px;
-      cursor: nwse-resize;
-    }
-
-    /* === TASKBAR === */
+    /* Taskbar */
     #taskbar {
       position: fixed;
       bottom: 0;
@@ -655,14 +449,8 @@
       transition: transform 0.2s ease;
     }
 
-    #taskbar.visible {
-      transform: translateY(0);
-    }
-
-    #taskbar-items {
-      display: flex;
-      gap: 8px;
-    }
+    #taskbar.visible { transform: translateY(0); }
+    #taskbar-items { display: flex; gap: 8px; }
 
     .taskbar-item {
       display: flex;
@@ -675,322 +463,12 @@
       color: #ccc;
       font-size: 13px;
       cursor: pointer;
-      transition: background 0.15s;
     }
 
-    .taskbar-item:hover {
-      background: rgba(255, 255, 255, 0.15);
-    }
+    .taskbar-item:hover { background: rgba(255, 255, 255, 0.15); }
+    .taskbar-item .dot { width: 8px; height: 8px; border-radius: 50%; }
 
-    .taskbar-item .dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-    }
-
-    /* === TABBED WINDOWS === */
-    .window-tabs {
-      display: none;
-      background: rgba(0, 0, 0, 0.3);
-      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-      padding: 4px 8px 0;
-      gap: 2px;
-      overflow-x: auto;
-      flex-shrink: 0;
-    }
-
-    .window-tabs.visible {
-      display: flex;
-    }
-
-    .window-tab {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      padding: 6px 12px;
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-bottom: none;
-      border-radius: 6px 6px 0 0;
-      color: rgba(255, 255, 255, 0.6);
-      font-size: 12px;
-      cursor: pointer;
-      max-width: 150px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      transition: all 0.15s;
-    }
-
-    .window-tab:hover {
-      background: rgba(255, 255, 255, 0.1);
-      color: rgba(255, 255, 255, 0.8);
-    }
-
-    .window-tab.active {
-      background: rgba(15, 15, 20, 0.95);
-      color: #fff;
-      border-color: rgba(255, 255, 255, 0.15);
-    }
-
-    .window-tab .tab-dot {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      flex-shrink: 0;
-    }
-
-    .window-tab .tab-title {
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .window-tab .tab-close {
-      width: 14px;
-      height: 14px;
-      background: none;
-      border: none;
-      color: rgba(255, 255, 255, 0.4);
-      font-size: 12px;
-      cursor: pointer;
-      padding: 0;
-      line-height: 1;
-      border-radius: 3px;
-      flex-shrink: 0;
-      opacity: 0;
-      transition: all 0.15s;
-    }
-
-    .window-tab:hover .tab-close {
-      opacity: 1;
-    }
-
-    .window-tab .tab-close:hover {
-      background: rgba(255, 255, 255, 0.2);
-      color: #fff;
-    }
-
-    .tab-content {
-      display: none;
-      flex: 1;
-      overflow-y: auto;
-      padding: 20px;
-      color: #ccc;
-      line-height: 1.7;
-    }
-
-    .tab-content.active {
-      display: block;
-    }
-
-    .window-tabs-content {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
-
-    .window-tabs-content .tab-content {
-      flex: 1;
-    }
-
-    /* === SETTINGS PANEL === */
-    #settings-btn {
-      position: fixed;
-      bottom: 20px;
-      left: 80px;
-      width: 40px;
-      height: 40px;
-      background: rgba(10, 10, 15, 0.85);
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      border-radius: 10px;
-      color: rgba(255, 255, 255, 0.6);
-      font-size: 20px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 100;
-      backdrop-filter: blur(10px);
-      transition: all 0.2s;
-    }
-
-    #settings-btn:hover {
-      background: rgba(255, 255, 255, 0.1);
-      color: #fff;
-      transform: rotate(30deg);
-    }
-
-    #settings-window {
-      display: none;
-      position: fixed;
-      left: 50%;
-      top: 50%;
-      transform: translate(-50%, -50%);
-      width: 400px;
-      max-height: 80vh;
-      background: rgba(15, 15, 20, 0.95);
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      border-radius: 12px;
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-      z-index: 500;
-      backdrop-filter: blur(15px);
-      overflow: hidden;
-    }
-
-    #settings-window.visible {
-      display: block;
-    }
-
-    #settings-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 16px 20px;
-      background: rgba(255, 255, 255, 0.05);
-      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    }
-
-    #settings-header h3 {
-      margin: 0;
-      font-size: 16px;
-      color: #fff;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    #settings-close {
-      width: 28px;
-      height: 28px;
-      background: rgba(255, 255, 255, 0.1);
-      border: none;
-      border-radius: 6px;
-      color: rgba(255, 255, 255, 0.7);
-      font-size: 16px;
-      cursor: pointer;
-      transition: all 0.15s;
-    }
-
-    #settings-close:hover {
-      background: #e53935;
-      color: #fff;
-    }
-
-    #settings-content {
-      padding: 20px;
-      overflow-y: auto;
-      max-height: calc(80vh - 60px);
-    }
-
-    .settings-section {
-      margin-bottom: 24px;
-    }
-
-    .settings-section:last-child {
-      margin-bottom: 0;
-    }
-
-    .settings-section h4 {
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 1.5px;
-      color: rgba(255, 255, 255, 0.4);
-      margin-bottom: 12px;
-    }
-
-    .settings-option {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 10px 0;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-    }
-
-    .settings-option:last-child {
-      border-bottom: none;
-    }
-
-    .settings-option label {
-      color: #ccc;
-      font-size: 14px;
-    }
-
-    .settings-option .toggle {
-      position: relative;
-      width: 44px;
-      height: 24px;
-      background: rgba(255, 255, 255, 0.1);
-      border-radius: 12px;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-
-    .settings-option .toggle.active {
-      background: rgba(245, 158, 11, 0.6);
-    }
-
-    .settings-option .toggle::after {
-      content: '';
-      position: absolute;
-      top: 2px;
-      left: 2px;
-      width: 20px;
-      height: 20px;
-      background: #fff;
-      border-radius: 50%;
-      transition: transform 0.2s;
-    }
-
-    .settings-option .toggle.active::after {
-      transform: translateX(20px);
-    }
-
-    .settings-option select {
-      background: rgba(255, 255, 255, 0.1);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      border-radius: 6px;
-      color: #fff;
-      padding: 6px 12px;
-      font-size: 13px;
-      cursor: pointer;
-    }
-
-    .settings-option select:focus {
-      outline: none;
-      border-color: rgba(245, 158, 11, 0.5);
-    }
-
-    .theme-preview {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 10px;
-      margin-top: 8px;
-    }
-
-    .theme-option {
-      aspect-ratio: 16/10;
-      border-radius: 8px;
-      cursor: pointer;
-      border: 2px solid transparent;
-      transition: all 0.2s;
-      overflow: hidden;
-    }
-
-    .theme-option:hover {
-      transform: scale(1.05);
-    }
-
-    .theme-option.active {
-      border-color: #f59e0b;
-    }
-
-    .theme-option .theme-gradient {
-      width: 100%;
-      height: 100%;
-    }
-
-    /* === MUSIC PLAYER === */
+    /* Music Player */
     #music-player {
       position: fixed;
       top: 20px;
@@ -1002,7 +480,6 @@
       overflow: hidden;
       z-index: 100;
       backdrop-filter: blur(10px);
-      user-select: none;
     }
 
     #player-header {
@@ -1017,10 +494,6 @@
       cursor: grab;
     }
 
-    #player-header:active {
-      cursor: grabbing;
-    }
-
     #player-toggle-btn {
       width: 20px;
       height: 20px;
@@ -1029,28 +502,14 @@
       border-radius: 4px;
       color: rgba(255, 255, 255, 0.7);
       font-size: 14px;
-      line-height: 1;
       cursor: pointer;
       padding: 0;
     }
 
-    #player-toggle-btn:hover {
-      background: rgba(255, 255, 255, 0.2);
-      color: #fff;
-    }
-
-    #player-body {
-      padding: 12px;
-    }
-
-    #player-body.collapsed {
-      display: none;
-    }
-
-    #track-info {
-      margin-bottom: 10px;
-      text-align: center;
-    }
+    #player-toggle-btn:hover { background: rgba(255, 255, 255, 0.2); color: #fff; }
+    #player-body { padding: 12px; }
+    #player-body.collapsed { display: none; }
+    #track-info { margin-bottom: 10px; text-align: center; }
 
     #track-name {
       font-size: 12px;
@@ -1061,12 +520,7 @@
       text-overflow: ellipsis;
     }
 
-    #player-controls {
-      display: flex;
-      justify-content: center;
-      gap: 8px;
-      margin-bottom: 10px;
-    }
+    #player-controls { display: flex; justify-content: center; gap: 8px; margin-bottom: 10px; }
 
     #player-controls button {
       width: 36px;
@@ -1077,17 +531,12 @@
       color: rgba(255, 255, 255, 0.8);
       font-size: 12px;
       cursor: pointer;
-      transition: all 0.15s;
       display: flex;
       align-items: center;
       justify-content: center;
     }
 
-    #player-controls button:hover {
-      background: rgba(255, 255, 255, 0.2);
-      color: #fff;
-      transform: scale(1.05);
-    }
+    #player-controls button:hover { background: rgba(255, 255, 255, 0.2); color: #fff; }
 
     #play-btn {
       width: 42px !important;
@@ -1097,27 +546,14 @@
       border-color: rgba(245, 158, 11, 0.5) !important;
     }
 
-    #play-btn:hover {
-      background: rgba(245, 158, 11, 0.5) !important;
-    }
-
-    #volume-control {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 8px;
-    }
-
-    #volume-icon {
-      font-size: 14px;
-      cursor: pointer;
-    }
+    #play-btn:hover { background: rgba(245, 158, 11, 0.5) !important; }
+    #volume-control { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+    #volume-icon { font-size: 14px; cursor: pointer; }
 
     #volume-slider {
       flex: 1;
       height: 4px;
       -webkit-appearance: none;
-      appearance: none;
       background: rgba(255, 255, 255, 0.2);
       border-radius: 2px;
       outline: none;
@@ -1125,21 +561,11 @@
 
     #volume-slider::-webkit-slider-thumb {
       -webkit-appearance: none;
-      appearance: none;
       width: 12px;
       height: 12px;
       background: #f59e0b;
       border-radius: 50%;
       cursor: pointer;
-    }
-
-    #volume-slider::-moz-range-thumb {
-      width: 12px;
-      height: 12px;
-      background: #f59e0b;
-      border-radius: 50%;
-      cursor: pointer;
-      border: none;
     }
 
     #progress-container {
@@ -1155,91 +581,9 @@
       width: 0%;
       background: linear-gradient(90deg, #f59e0b, #fbbf24);
       border-radius: 2px;
-      transition: width 0.1s linear;
     }
 
-    /* === TAB BAR === */
-    .window-tabs {
-      display: none;
-      background: rgba(0, 0, 0, 0.3);
-      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-      padding: 4px 8px 0;
-      overflow-x: auto;
-      white-space: nowrap;
-    }
-
-    .window-tabs.visible {
-      display: flex;
-      gap: 2px;
-    }
-
-    .window-tab {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 8px 12px;
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-bottom: none;
-      border-radius: 6px 6px 0 0;
-      color: rgba(255, 255, 255, 0.6);
-      font-size: 12px;
-      cursor: pointer;
-      transition: all 0.15s;
-      max-width: 150px;
-    }
-
-    .window-tab:hover {
-      background: rgba(255, 255, 255, 0.1);
-      color: rgba(255, 255, 255, 0.8);
-    }
-
-    .window-tab.active {
-      background: rgba(255, 255, 255, 0.1);
-      color: #fff;
-      border-color: rgba(255, 255, 255, 0.2);
-    }
-
-    .window-tab .tab-dot {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      flex-shrink: 0;
-    }
-
-    .window-tab .tab-title {
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    .window-tab .tab-close {
-      width: 16px;
-      height: 16px;
-      border: none;
-      background: transparent;
-      color: rgba(255, 255, 255, 0.4);
-      font-size: 14px;
-      cursor: pointer;
-      border-radius: 3px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-      opacity: 0;
-      transition: opacity 0.15s, background 0.15s;
-    }
-
-    .window-tab:hover .tab-close {
-      opacity: 1;
-    }
-
-    .window-tab .tab-close:hover {
-      background: rgba(255, 255, 255, 0.2);
-      color: #fff;
-    }
-
-    /* === SETTINGS BUTTON === */
+    /* Settings Button */
     #settings-btn {
       position: fixed;
       bottom: 20px;
@@ -1260,13 +604,23 @@
       transition: all 0.2s;
     }
 
-    #settings-btn:hover {
-      background: rgba(255, 255, 255, 0.1);
-      color: #fff;
-      transform: rotate(30deg);
+    #settings-btn:hover { background: rgba(255, 255, 255, 0.1); color: #fff; transform: rotate(30deg); }
+
+    /* Settings Overlay */
+    #settings-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 499;
+      display: none;
     }
 
-    /* === SETTINGS PANEL === */
+    #settings-overlay.visible { display: block; }
+
+    /* Settings Panel */
     #settings-panel {
       position: fixed;
       top: 50%;
@@ -1284,9 +638,7 @@
       overflow: hidden;
     }
 
-    #settings-panel.visible {
-      display: block;
-    }
+    #settings-panel.visible { display: block; }
 
     .settings-header {
       display: flex;
@@ -1298,12 +650,9 @@
     }
 
     .settings-header h3 {
+      margin: 0;
       font-size: 16px;
-      font-weight: 500;
       color: #fff;
-      display: flex;
-      align-items: center;
-      gap: 10px;
     }
 
     .settings-close {
@@ -1320,10 +669,7 @@
       justify-content: center;
     }
 
-    .settings-close:hover {
-      background: #e53935;
-      color: #fff;
-    }
+    .settings-close:hover { background: #e53935; color: #fff; }
 
     .settings-body {
       padding: 20px;
@@ -1331,13 +677,8 @@
       max-height: calc(80vh - 60px);
     }
 
-    .settings-section {
-      margin-bottom: 24px;
-    }
-
-    .settings-section:last-child {
-      margin-bottom: 0;
-    }
+    .settings-section { margin-bottom: 24px; }
+    .settings-section:last-child { margin-bottom: 0; }
 
     .settings-section h4 {
       font-size: 11px;
@@ -1355,20 +696,9 @@
       border-bottom: 1px solid rgba(255, 255, 255, 0.05);
     }
 
-    .setting-row:last-child {
-      border-bottom: none;
-    }
-
-    .setting-label {
-      font-size: 14px;
-      color: #ccc;
-    }
-
-    .setting-description {
-      font-size: 11px;
-      color: rgba(255, 255, 255, 0.4);
-      margin-top: 2px;
-    }
+    .setting-row:last-child { border-bottom: none; }
+    .setting-label { font-size: 14px; color: #ccc; }
+    .setting-description { font-size: 11px; color: rgba(255, 255, 255, 0.4); margin-top: 2px; }
 
     /* Toggle Switch */
     .toggle-switch {
@@ -1381,9 +711,7 @@
       transition: background 0.2s;
     }
 
-    .toggle-switch.active {
-      background: #f59e0b;
-    }
+    .toggle-switch.active { background: #f59e0b; }
 
     .toggle-switch::after {
       content: '';
@@ -1397,16 +725,13 @@
       transition: transform 0.2s;
     }
 
-    .toggle-switch.active::after {
-      transform: translateX(20px);
-    }
+    .toggle-switch.active::after { transform: translateX(20px); }
 
-    /* Theme Selector */
+    /* Theme Grid */
     .theme-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
       gap: 8px;
-      margin-top: 8px;
     }
 
     .theme-option {
@@ -1419,82 +744,34 @@
       transition: all 0.15s;
     }
 
-    .theme-option:hover {
-      background: rgba(255, 255, 255, 0.1);
-    }
-
-    .theme-option.active {
-      border-color: #f59e0b;
-    }
-
-    .theme-preview {
-      width: 100%;
-      height: 30px;
-      border-radius: 4px;
-      margin-bottom: 6px;
-    }
-
-    .theme-name {
-      font-size: 11px;
-      color: rgba(255, 255, 255, 0.7);
-    }
-
-    /* Settings overlay */
-    #settings-overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0, 0, 0, 0.5);
-      z-index: 499;
-      display: none;
-    }
-
-    #settings-overlay.visible {
-      display: block;
-    }
+    .theme-option:hover { background: rgba(255, 255, 255, 0.1); }
+    .theme-option.active { border-color: #f59e0b; }
+    .theme-preview { width: 100%; height: 30px; border-radius: 4px; margin-bottom: 6px; }
+    .theme-name { font-size: 11px; color: rgba(255, 255, 255, 0.7); }
   </style>
 </head>
 <body>
   <div id="gradient-bg"></div>
-  
   <div id="graph-container"></div>
 
-  <!-- Search bar -->
   <div id="search-container">
     <span id="search-icon">⌕</span>
-    <input 
-      type="text" 
-      id="search-input" 
-      placeholder="Search nodes..." 
-      autocomplete="off"
-    />
+    <input type="text" id="search-input" placeholder="Search nodes..." autocomplete="off"/>
     <div id="search-results"></div>
   </div>
 
-  <!-- Window container - windows will be appended here -->
   <div id="windows-container"></div>
 
-  <!-- Taskbar for minimized windows -->
   <div id="taskbar">
     <div id="taskbar-items"></div>
   </div>
 
   <div id="cluster-indicator">Core</div>
 
-  <div id="info-panel">
-    <button class="close-btn" onclick="closePanel()">×</button>
-    <span id="panel-cluster">Cluster</span>
-    <h2 id="panel-title">Node Title</h2>
-    <p id="panel-description">Node description goes here.</p>
-  </div>
-
   <div id="instructions">
     Click a node to view details · Drag to rotate · Scroll to zoom
   </div>
 
-  <!-- Minimap -->
   <div id="minimap-container">
     <div id="minimap-header">
       MAP
@@ -1507,7 +784,6 @@
     <div id="camera-indicator"></div>
   </div>
 
-  <!-- Music Player -->
   <div id="music-player">
     <div id="player-header">
       <span id="player-title">♪ MUSIC</span>
@@ -1532,83 +808,9 @@
     </div>
   </div>
 
-  <!-- Settings Button -->
   <button id="settings-btn" title="Settings">⚙</button>
-
-  <!-- Settings Window -->
-  <div id="settings-window">
-    <div id="settings-header">
-      <h3>⚙ Settings</h3>
-      <button id="settings-close">×</button>
-    </div>
-    <div id="settings-content">
-      <div class="settings-section">
-        <h4>Theme</h4>
-        <div class="theme-preview" id="theme-options">
-          <div class="theme-option active" data-theme="default" title="Default">
-            <div class="theme-gradient" style="background: linear-gradient(to bottom, #fef3c7, #1c1917)"></div>
-          </div>
-          <div class="theme-option" data-theme="ocean" title="Ocean">
-            <div class="theme-gradient" style="background: linear-gradient(to bottom, #a5f3fc, #0c1929)"></div>
-          </div>
-          <div class="theme-option" data-theme="forest" title="Forest">
-            <div class="theme-gradient" style="background: linear-gradient(to bottom, #bbf7d0, #0a1f0d)"></div>
-          </div>
-          <div class="theme-option" data-theme="sunset" title="Sunset">
-            <div class="theme-gradient" style="background: linear-gradient(to bottom, #fecaca, #2d1b1b)"></div>
-          </div>
-          <div class="theme-option" data-theme="midnight" title="Midnight">
-            <div class="theme-gradient" style="background: linear-gradient(to bottom, #c4b5fd, #0f0a1f)"></div>
-          </div>
-          <div class="theme-option" data-theme="mono" title="Monochrome">
-            <div class="theme-gradient" style="background: linear-gradient(to bottom, #d4d4d4, #0a0a0a)"></div>
-          </div>
-        </div>
-      </div>
-      <div class="settings-section">
-        <h4>Interface</h4>
-        <div class="settings-option">
-          <label>Show Minimap</label>
-          <div class="toggle active" data-setting="showMinimap"></div>
-        </div>
-        <div class="settings-option">
-          <label>Show Music Player</label>
-          <div class="toggle active" data-setting="showMusicPlayer"></div>
-        </div>
-        <div class="settings-option">
-          <label>Show Instructions</label>
-          <div class="toggle active" data-setting="showInstructions"></div>
-        </div>
-        <div class="settings-option">
-          <label>Show Cluster Indicator</label>
-          <div class="toggle active" data-setting="showClusterIndicator"></div>
-        </div>
-      </div>
-      <div class="settings-section">
-        <h4>Windows</h4>
-        <div class="settings-option">
-          <label>Open Links in Tabs</label>
-          <div class="toggle active" data-setting="openInTabs"></div>
-        </div>
-        <div class="settings-option">
-          <label>Default Window Size</label>
-          <select data-setting="defaultWindowSize">
-            <option value="small">Small (400×350)</option>
-            <option value="medium" selected>Medium (550×450)</option>
-            <option value="large">Large (700×550)</option>
-          </select>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Settings Button -->
-  <button id="settings-btn" title="Settings">⚙</button>
-
-  <!-- Settings Overlay -->
   <div id="settings-overlay"></div>
 
-  <!-- Settings Panel -->
   <div id="settings-panel">
     <div class="settings-header">
       <h3>⚙ Settings</h3>
@@ -1622,27 +824,19 @@
       <div class="settings-section">
         <h4>Interface</h4>
         <div class="setting-row">
-          <div>
-            <div class="setting-label">Show Minimap</div>
-          </div>
+          <div class="setting-label">Show Minimap</div>
           <div class="toggle-switch active" data-setting="showMinimap"></div>
         </div>
         <div class="setting-row">
-          <div>
-            <div class="setting-label">Show Music Player</div>
-          </div>
+          <div class="setting-label">Show Music Player</div>
           <div class="toggle-switch active" data-setting="showMusicPlayer"></div>
         </div>
         <div class="setting-row">
-          <div>
-            <div class="setting-label">Show Instructions</div>
-          </div>
+          <div class="setting-label">Show Instructions</div>
           <div class="toggle-switch active" data-setting="showInstructions"></div>
         </div>
         <div class="setting-row">
-          <div>
-            <div class="setting-label">Show Cluster Indicator</div>
-          </div>
+          <div class="setting-label">Show Cluster Indicator</div>
           <div class="toggle-switch active" data-setting="showClusterIndicator"></div>
         </div>
       </div>
