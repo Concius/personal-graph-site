@@ -597,6 +597,28 @@
       height: 200px;
     }
 
+    .window-content .todo-list {
+      list-style: none;
+      padding-left: 0;
+    }
+
+    .window-content .todo-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 6px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .window-content .todo-item.checked {
+      opacity: 0.5;
+      text-decoration: line-through;
+    }
+
+    .window-content .todo-checkbox {
+      font-size: 16px;
+    }
+
     /* Resize handles */
     .resize-handle {
       position: absolute;
