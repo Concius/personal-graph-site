@@ -419,7 +419,8 @@
       color: #fff;
     }
 
-    .window-content {
+    .window-content,
+    .tab-content {
       flex: 1;
       padding: 20px;
       overflow-y: auto;
@@ -427,7 +428,16 @@
       line-height: 1.7;
     }
 
-    .window-content h1 {
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    .window-content h1,
+    .tab-content h1 {
       font-size: 24px;
       color: #fff;
       margin-bottom: 16px;
@@ -597,28 +607,6 @@
       height: 200px;
     }
 
-    .window-content .todo-list {
-      list-style: none;
-      padding-left: 0;
-    }
-
-    .window-content .todo-item {
-      display: flex;
-      align-items: flex-start;
-      gap: 8px;
-      padding: 6px 0;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-    }
-
-    .window-content .todo-item.checked {
-      opacity: 0.5;
-      text-decoration: line-through;
-    }
-
-    .window-content .todo-checkbox {
-      font-size: 16px;
-    }
-
     /* Resize handles */
     .resize-handle {
       position: absolute;
@@ -698,6 +686,308 @@
       width: 8px;
       height: 8px;
       border-radius: 50%;
+    }
+
+    /* === TABBED WINDOWS === */
+    .window-tabs {
+      display: none;
+      background: rgba(0, 0, 0, 0.3);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 4px 8px 0;
+      gap: 2px;
+      overflow-x: auto;
+      flex-shrink: 0;
+    }
+
+    .window-tabs.visible {
+      display: flex;
+    }
+
+    .window-tab {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-bottom: none;
+      border-radius: 6px 6px 0 0;
+      color: rgba(255, 255, 255, 0.6);
+      font-size: 12px;
+      cursor: pointer;
+      max-width: 150px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      transition: all 0.15s;
+    }
+
+    .window-tab:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: rgba(255, 255, 255, 0.8);
+    }
+
+    .window-tab.active {
+      background: rgba(15, 15, 20, 0.95);
+      color: #fff;
+      border-color: rgba(255, 255, 255, 0.15);
+    }
+
+    .window-tab .tab-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .window-tab .tab-title {
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .window-tab .tab-close {
+      width: 14px;
+      height: 14px;
+      background: none;
+      border: none;
+      color: rgba(255, 255, 255, 0.4);
+      font-size: 12px;
+      cursor: pointer;
+      padding: 0;
+      line-height: 1;
+      border-radius: 3px;
+      flex-shrink: 0;
+      opacity: 0;
+      transition: all 0.15s;
+    }
+
+    .window-tab:hover .tab-close {
+      opacity: 1;
+    }
+
+    .window-tab .tab-close:hover {
+      background: rgba(255, 255, 255, 0.2);
+      color: #fff;
+    }
+
+    .tab-content {
+      display: none;
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      color: #ccc;
+      line-height: 1.7;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    .window-tabs-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .window-tabs-content .tab-content {
+      flex: 1;
+    }
+
+    /* === SETTINGS PANEL === */
+    #settings-btn {
+      position: fixed;
+      bottom: 20px;
+      left: 80px;
+      width: 40px;
+      height: 40px;
+      background: rgba(10, 10, 15, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 10px;
+      color: rgba(255, 255, 255, 0.6);
+      font-size: 20px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      backdrop-filter: blur(10px);
+      transition: all 0.2s;
+    }
+
+    #settings-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+      transform: rotate(30deg);
+    }
+
+    #settings-window {
+      display: none;
+      position: fixed;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      width: 400px;
+      max-height: 80vh;
+      background: rgba(15, 15, 20, 0.95);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 12px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+      z-index: 500;
+      backdrop-filter: blur(15px);
+      overflow: hidden;
+    }
+
+    #settings-window.visible {
+      display: block;
+    }
+
+    #settings-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 20px;
+      background: rgba(255, 255, 255, 0.05);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    #settings-header h3 {
+      margin: 0;
+      font-size: 16px;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    #settings-close {
+      width: 28px;
+      height: 28px;
+      background: rgba(255, 255, 255, 0.1);
+      border: none;
+      border-radius: 6px;
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 16px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    #settings-close:hover {
+      background: #e53935;
+      color: #fff;
+    }
+
+    #settings-content {
+      padding: 20px;
+      overflow-y: auto;
+      max-height: calc(80vh - 60px);
+    }
+
+    .settings-section {
+      margin-bottom: 24px;
+    }
+
+    .settings-section:last-child {
+      margin-bottom: 0;
+    }
+
+    .settings-section h4 {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: rgba(255, 255, 255, 0.4);
+      margin-bottom: 12px;
+    }
+
+    .settings-option {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .settings-option:last-child {
+      border-bottom: none;
+    }
+
+    .settings-option label {
+      color: #ccc;
+      font-size: 14px;
+    }
+
+    .settings-option .toggle {
+      position: relative;
+      width: 44px;
+      height: 24px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .settings-option .toggle.active {
+      background: rgba(245, 158, 11, 0.6);
+    }
+
+    .settings-option .toggle::after {
+      content: '';
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 20px;
+      height: 20px;
+      background: #fff;
+      border-radius: 50%;
+      transition: transform 0.2s;
+    }
+
+    .settings-option .toggle.active::after {
+      transform: translateX(20px);
+    }
+
+    .settings-option select {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 6px;
+      color: #fff;
+      padding: 6px 12px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    .settings-option select:focus {
+      outline: none;
+      border-color: rgba(245, 158, 11, 0.5);
+    }
+
+    .theme-preview {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-top: 8px;
+    }
+
+    .theme-option {
+      aspect-ratio: 16/10;
+      border-radius: 8px;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: all 0.2s;
+      overflow: hidden;
+    }
+
+    .theme-option:hover {
+      transform: scale(1.05);
+    }
+
+    .theme-option.active {
+      border-color: #f59e0b;
+    }
+
+    .theme-option .theme-gradient {
+      width: 100%;
+      height: 100%;
     }
 
     /* === MUSIC PLAYER === */
@@ -867,6 +1157,303 @@
       border-radius: 2px;
       transition: width 0.1s linear;
     }
+
+    /* === TAB BAR === */
+    .window-tabs {
+      display: none;
+      background: rgba(0, 0, 0, 0.3);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 4px 8px 0;
+      overflow-x: auto;
+      white-space: nowrap;
+    }
+
+    .window-tabs.visible {
+      display: flex;
+      gap: 2px;
+    }
+
+    .window-tab {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 12px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-bottom: none;
+      border-radius: 6px 6px 0 0;
+      color: rgba(255, 255, 255, 0.6);
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.15s;
+      max-width: 150px;
+    }
+
+    .window-tab:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: rgba(255, 255, 255, 0.8);
+    }
+
+    .window-tab.active {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .window-tab .tab-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .window-tab .tab-title {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .window-tab .tab-close {
+      width: 16px;
+      height: 16px;
+      border: none;
+      background: transparent;
+      color: rgba(255, 255, 255, 0.4);
+      font-size: 14px;
+      cursor: pointer;
+      border-radius: 3px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      opacity: 0;
+      transition: opacity 0.15s, background 0.15s;
+    }
+
+    .window-tab:hover .tab-close {
+      opacity: 1;
+    }
+
+    .window-tab .tab-close:hover {
+      background: rgba(255, 255, 255, 0.2);
+      color: #fff;
+    }
+
+    /* === SETTINGS BUTTON === */
+    #settings-btn {
+      position: fixed;
+      bottom: 20px;
+      left: 80px;
+      width: 40px;
+      height: 40px;
+      background: rgba(10, 10, 15, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 50%;
+      color: rgba(255, 255, 255, 0.6);
+      font-size: 20px;
+      cursor: pointer;
+      z-index: 100;
+      backdrop-filter: blur(10px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+
+    #settings-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+      transform: rotate(30deg);
+    }
+
+    /* === SETTINGS PANEL === */
+    #settings-panel {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 400px;
+      max-height: 80vh;
+      background: rgba(15, 15, 20, 0.95);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 12px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+      z-index: 500;
+      backdrop-filter: blur(15px);
+      display: none;
+      overflow: hidden;
+    }
+
+    #settings-panel.visible {
+      display: block;
+    }
+
+    .settings-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 20px;
+      background: rgba(255, 255, 255, 0.05);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .settings-header h3 {
+      font-size: 16px;
+      font-weight: 500;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .settings-close {
+      width: 28px;
+      height: 28px;
+      background: rgba(255, 255, 255, 0.1);
+      border: none;
+      border-radius: 6px;
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 18px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .settings-close:hover {
+      background: #e53935;
+      color: #fff;
+    }
+
+    .settings-body {
+      padding: 20px;
+      overflow-y: auto;
+      max-height: calc(80vh - 60px);
+    }
+
+    .settings-section {
+      margin-bottom: 24px;
+    }
+
+    .settings-section:last-child {
+      margin-bottom: 0;
+    }
+
+    .settings-section h4 {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: rgba(255, 255, 255, 0.4);
+      margin-bottom: 12px;
+    }
+
+    .setting-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .setting-row:last-child {
+      border-bottom: none;
+    }
+
+    .setting-label {
+      font-size: 14px;
+      color: #ccc;
+    }
+
+    .setting-description {
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.4);
+      margin-top: 2px;
+    }
+
+    /* Toggle Switch */
+    .toggle-switch {
+      position: relative;
+      width: 44px;
+      height: 24px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .toggle-switch.active {
+      background: #f59e0b;
+    }
+
+    .toggle-switch::after {
+      content: '';
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 20px;
+      height: 20px;
+      background: #fff;
+      border-radius: 50%;
+      transition: transform 0.2s;
+    }
+
+    .toggle-switch.active::after {
+      transform: translateX(20px);
+    }
+
+    /* Theme Selector */
+    .theme-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .theme-option {
+      padding: 12px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 2px solid transparent;
+      border-radius: 8px;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.15s;
+    }
+
+    .theme-option:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .theme-option.active {
+      border-color: #f59e0b;
+    }
+
+    .theme-preview {
+      width: 100%;
+      height: 30px;
+      border-radius: 4px;
+      margin-bottom: 6px;
+    }
+
+    .theme-name {
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.7);
+    }
+
+    /* Settings overlay */
+    #settings-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 499;
+      display: none;
+    }
+
+    #settings-overlay.visible {
+      display: block;
+    }
   </style>
 </head>
 <body>
@@ -941,6 +1528,133 @@
       </div>
       <div id="progress-container">
         <div id="progress-bar"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings Button -->
+  <button id="settings-btn" title="Settings">⚙</button>
+
+  <!-- Settings Window -->
+  <div id="settings-window">
+    <div id="settings-header">
+      <h3>⚙ Settings</h3>
+      <button id="settings-close">×</button>
+    </div>
+    <div id="settings-content">
+      <div class="settings-section">
+        <h4>Theme</h4>
+        <div class="theme-preview" id="theme-options">
+          <div class="theme-option active" data-theme="default" title="Default">
+            <div class="theme-gradient" style="background: linear-gradient(to bottom, #fef3c7, #1c1917)"></div>
+          </div>
+          <div class="theme-option" data-theme="ocean" title="Ocean">
+            <div class="theme-gradient" style="background: linear-gradient(to bottom, #a5f3fc, #0c1929)"></div>
+          </div>
+          <div class="theme-option" data-theme="forest" title="Forest">
+            <div class="theme-gradient" style="background: linear-gradient(to bottom, #bbf7d0, #0a1f0d)"></div>
+          </div>
+          <div class="theme-option" data-theme="sunset" title="Sunset">
+            <div class="theme-gradient" style="background: linear-gradient(to bottom, #fecaca, #2d1b1b)"></div>
+          </div>
+          <div class="theme-option" data-theme="midnight" title="Midnight">
+            <div class="theme-gradient" style="background: linear-gradient(to bottom, #c4b5fd, #0f0a1f)"></div>
+          </div>
+          <div class="theme-option" data-theme="mono" title="Monochrome">
+            <div class="theme-gradient" style="background: linear-gradient(to bottom, #d4d4d4, #0a0a0a)"></div>
+          </div>
+        </div>
+      </div>
+      <div class="settings-section">
+        <h4>Interface</h4>
+        <div class="settings-option">
+          <label>Show Minimap</label>
+          <div class="toggle active" data-setting="showMinimap"></div>
+        </div>
+        <div class="settings-option">
+          <label>Show Music Player</label>
+          <div class="toggle active" data-setting="showMusicPlayer"></div>
+        </div>
+        <div class="settings-option">
+          <label>Show Instructions</label>
+          <div class="toggle active" data-setting="showInstructions"></div>
+        </div>
+        <div class="settings-option">
+          <label>Show Cluster Indicator</label>
+          <div class="toggle active" data-setting="showClusterIndicator"></div>
+        </div>
+      </div>
+      <div class="settings-section">
+        <h4>Windows</h4>
+        <div class="settings-option">
+          <label>Open Links in Tabs</label>
+          <div class="toggle active" data-setting="openInTabs"></div>
+        </div>
+        <div class="settings-option">
+          <label>Default Window Size</label>
+          <select data-setting="defaultWindowSize">
+            <option value="small">Small (400×350)</option>
+            <option value="medium" selected>Medium (550×450)</option>
+            <option value="large">Large (700×550)</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings Button -->
+  <button id="settings-btn" title="Settings">⚙</button>
+
+  <!-- Settings Overlay -->
+  <div id="settings-overlay"></div>
+
+  <!-- Settings Panel -->
+  <div id="settings-panel">
+    <div class="settings-header">
+      <h3>⚙ Settings</h3>
+      <button class="settings-close">×</button>
+    </div>
+    <div class="settings-body">
+      <div class="settings-section">
+        <h4>Theme</h4>
+        <div class="theme-grid" id="theme-grid"></div>
+      </div>
+      <div class="settings-section">
+        <h4>Interface</h4>
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">Show Minimap</div>
+          </div>
+          <div class="toggle-switch active" data-setting="showMinimap"></div>
+        </div>
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">Show Music Player</div>
+          </div>
+          <div class="toggle-switch active" data-setting="showMusicPlayer"></div>
+        </div>
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">Show Instructions</div>
+          </div>
+          <div class="toggle-switch active" data-setting="showInstructions"></div>
+        </div>
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">Show Cluster Indicator</div>
+          </div>
+          <div class="toggle-switch active" data-setting="showClusterIndicator"></div>
+        </div>
+      </div>
+      <div class="settings-section">
+        <h4>Windows</h4>
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">Open Links in Tabs</div>
+            <div class="setting-description">Middle-click always opens in new tab</div>
+          </div>
+          <div class="toggle-switch active" data-setting="openInTabs"></div>
+        </div>
       </div>
     </div>
   </div>

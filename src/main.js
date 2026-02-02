@@ -548,7 +548,174 @@ function initMinimap() {
 }
 
 
-// === WINDOW MANAGEMENT ===
+// === SETTINGS MANAGEMENT ===
+
+const defaultSettings = {
+  theme: 'default',
+  showMinimap: true,
+  showMusicPlayer: true,
+  showInstructions: true,
+  showClusterIndicator: true,
+  openInTabs: true,
+  defaultWindowSize: 'medium'
+};
+
+const themes = {
+  default: { bgLight: '#fef3c7', bgDark: '#1c1917' },
+  ocean: { bgLight: '#a5f3fc', bgDark: '#0c1929' },
+  forest: { bgLight: '#bbf7d0', bgDark: '#0a1f0d' },
+  sunset: { bgLight: '#fecaca', bgDark: '#2d1b1b' },
+  midnight: { bgLight: '#c4b5fd', bgDark: '#0f0a1f' },
+  mono: { bgLight: '#d4d4d4', bgDark: '#0a0a0a' }
+};
+
+const windowSizes = {
+  small: { width: 400, height: 350 },
+  medium: { width: 550, height: 450 },
+  large: { width: 700, height: 550 }
+};
+
+let settings = { ...defaultSettings };
+
+function loadSettings() {
+  try {
+    const saved = localStorage.getItem('graphSiteSettings');
+    if (saved) {
+      settings = { ...defaultSettings, ...JSON.parse(saved) };
+    }
+  } catch (e) {
+    console.log('Could not load settings:', e);
+  }
+  applySettings();
+}
+
+function saveSettings() {
+  try {
+    localStorage.setItem('graphSiteSettings', JSON.stringify(settings));
+  } catch (e) {
+    console.log('Could not save settings:', e);
+  }
+}
+
+function applySettings() {
+  // Apply theme
+  applyTheme(settings.theme);
+  
+  // Apply visibility toggles
+  const minimap = document.getElementById('minimap-container');
+  const musicPlayer = document.getElementById('music-player');
+  const instructions = document.getElementById('instructions');
+  const clusterIndicator = document.getElementById('cluster-indicator');
+  
+  if (minimap) minimap.style.display = settings.showMinimap ? 'block' : 'none';
+  if (musicPlayer) musicPlayer.style.display = settings.showMusicPlayer ? 'block' : 'none';
+  if (instructions) instructions.style.display = settings.showInstructions ? 'block' : 'none';
+  if (clusterIndicator) clusterIndicator.style.display = settings.showClusterIndicator ? 'block' : 'none';
+  
+  // Update settings UI
+  updateSettingsUI();
+}
+
+function applyTheme(themeName) {
+  const theme = themes[themeName];
+  if (!theme) return;
+  
+  // Only apply if no active cluster override
+  if (!activeCluster || activeCluster === 'core') {
+    gradientBg.style.background = `linear-gradient(to bottom, ${theme.bgLight} 0%, ${theme.bgDark} 100%)`;
+  }
+}
+
+function updateSettingsUI() {
+  // Update theme selection
+  document.querySelectorAll('.theme-option').forEach(opt => {
+    opt.classList.toggle('active', opt.dataset.theme === settings.theme);
+  });
+  
+  // Update toggles
+  document.querySelectorAll('.toggle-switch[data-setting]').forEach(toggle => {
+    const setting = toggle.dataset.setting;
+    toggle.classList.toggle('active', settings[setting]);
+  });
+}
+
+function initSettings() {
+  loadSettings();
+  
+  const settingsBtn = document.getElementById('settings-btn');
+  const settingsPanel = document.getElementById('settings-panel');
+  const settingsOverlay = document.getElementById('settings-overlay');
+  const settingsClose = settingsPanel?.querySelector('.settings-close');
+  
+  // Build theme grid
+  const themeGrid = document.getElementById('theme-grid');
+  if (themeGrid) {
+    const themeNames = {
+      default: 'Amber',
+      ocean: 'Ocean',
+      forest: 'Forest',
+      sunset: 'Sunset',
+      midnight: 'Midnight',
+      mono: 'Mono'
+    };
+    
+    themeGrid.innerHTML = Object.entries(themes).map(([key, theme]) => `
+      <div class="theme-option ${key === settings.theme ? 'active' : ''}" data-theme="${key}">
+        <div class="theme-preview" style="background: linear-gradient(to bottom, ${theme.bgLight}, ${theme.bgDark})"></div>
+        <div class="theme-name">${themeNames[key] || key}</div>
+      </div>
+    `).join('');
+  }
+  
+  // Open/close settings panel
+  settingsBtn?.addEventListener('click', () => {
+    settingsPanel?.classList.add('visible');
+    settingsOverlay?.classList.add('visible');
+  });
+  
+  const closeSettings = () => {
+    settingsPanel?.classList.remove('visible');
+    settingsOverlay?.classList.remove('visible');
+  };
+  
+  settingsClose?.addEventListener('click', closeSettings);
+  settingsOverlay?.addEventListener('click', closeSettings);
+  
+  // Theme selection
+  document.querySelectorAll('.theme-option').forEach(opt => {
+    opt.addEventListener('click', () => {
+      settings.theme = opt.dataset.theme;
+      document.querySelectorAll('.theme-option').forEach(o => o.classList.remove('active'));
+      opt.classList.add('active');
+      saveSettings();
+      applySettings();
+    });
+  });
+  
+  // Toggle settings
+  document.querySelectorAll('.toggle-switch[data-setting]').forEach(toggle => {
+    // Set initial state
+    toggle.classList.toggle('active', settings[toggle.dataset.setting]);
+    
+    toggle.addEventListener('click', () => {
+      const setting = toggle.dataset.setting;
+      settings[setting] = !settings[setting];
+      toggle.classList.toggle('active', settings[setting]);
+      saveSettings();
+      applySettings();
+    });
+  });
+  
+  // Escape key to close
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && settingsPanel?.classList.contains('visible')) {
+      closeSettings();
+    }
+  });
+}
+
+
+// === WINDOW MANAGEMENT (TABBED) ===
 
 const windowsContainer = document.getElementById('windows-container');
 const taskbar = document.getElementById('taskbar');
@@ -558,23 +725,45 @@ let openWindows = {};
 let windowZIndex = 200;
 let activeWindowId = null;
 
-async function createWindow(node) {
-  // If window already exists, focus it
-  if (openWindows[node.id]) {
-    restoreWindow(node.id);
-    bringToFront(node.id);
-    return;
+function getWindowSize(node) {
+  // Special sizes for certain node types
+  if (node.id === 'home' || node.group === 'core') {
+    return { width: 650, height: 500 };
+  }
+  
+  // Use settings default
+  return windowSizes[settings.defaultWindowSize] || windowSizes.medium;
+}
+
+async function createWindow(node, openAsTab = false, targetWindowId = null) {
+  // If openAsTab is true and we have a target window, add tab to that window
+  if (openAsTab && targetWindowId && openWindows[targetWindowId]) {
+    return addTabToWindow(targetWindowId, node);
+  }
+  
+  // Check if node already has a tab somewhere
+  for (const [windowId, win] of Object.entries(openWindows)) {
+    const existingTab = win.tabs.find(t => t.node.id === node.id);
+    if (existingTab) {
+      // Switch to that tab and focus window
+      switchTab(windowId, existingTab.id);
+      restoreWindow(windowId);
+      bringToFront(windowId);
+      return;
+    }
   }
   
   const cluster = clusters[node.group];
-  const windowId = node.id;
+  const windowId = `window-${Date.now()}`;
+  const tabId = `tab-${Date.now()}`;
+  const size = getWindowSize(node);
   
-  // Create window element with loading state
+  // Create window element
   const windowEl = document.createElement('div');
   windowEl.className = 'content-window';
-  windowEl.id = `window-${windowId}`;
-  windowEl.style.width = '500px';
-  windowEl.style.height = '400px';
+  windowEl.id = windowId;
+  windowEl.style.width = `${size.width}px`;
+  windowEl.style.height = `${size.height}px`;
   windowEl.style.left = `${100 + Object.keys(openWindows).length * 30}px`;
   windowEl.style.top = `${80 + Object.keys(openWindows).length * 30}px`;
   windowEl.style.zIndex = ++windowZIndex;
@@ -583,7 +772,7 @@ async function createWindow(node) {
     <div class="window-header">
       <div class="window-title">
         <span class="window-title-dot" style="background: ${cluster?.color || '#6366f1'}"></span>
-        ${node.name}
+        <span class="window-title-text">${node.name}</span>
       </div>
       <div class="window-controls">
         <button class="minimize-btn" title="Minimize">−</button>
@@ -591,8 +780,11 @@ async function createWindow(node) {
         <button class="close-btn" title="Close">×</button>
       </div>
     </div>
-    <div class="window-content">
-      <div class="loading">Loading content...</div>
+    <div class="window-tabs"></div>
+    <div class="window-tabs-content">
+      <div class="tab-content active" data-tab-id="${tabId}">
+        <div class="loading">Loading content...</div>
+      </div>
     </div>
     <div class="resize-handle right"></div>
     <div class="resize-handle bottom"></div>
@@ -601,10 +793,15 @@ async function createWindow(node) {
   
   windowsContainer.appendChild(windowEl);
   
-  // Store window reference
+  // Store window reference with tabs array
   openWindows[windowId] = {
     element: windowEl,
-    node: node,
+    tabs: [{
+      id: tabId,
+      node: node,
+      loaded: false
+    }],
+    activeTabId: tabId,
     minimized: false,
     maximized: false
   };
@@ -617,8 +814,60 @@ async function createWindow(node) {
   windowEl.addEventListener('mousedown', () => bringToFront(windowId));
   bringToFront(windowId);
   
-  // Fetch content from Notion
-  const contentEl = windowEl.querySelector('.window-content');
+  // Load content for the tab
+  await loadTabContent(windowId, tabId);
+}
+
+async function addTabToWindow(windowId, node) {
+  const win = openWindows[windowId];
+  if (!win) return;
+  
+  // Check if node already has a tab in this window
+  const existingTab = win.tabs.find(t => t.node.id === node.id);
+  if (existingTab) {
+    switchTab(windowId, existingTab.id);
+    return;
+  }
+  
+  const cluster = clusters[node.group];
+  const tabId = `tab-${Date.now()}`;
+  
+  // Add tab data
+  win.tabs.push({
+    id: tabId,
+    node: node,
+    loaded: false
+  });
+  
+  // Add tab content container
+  const tabsContent = win.element.querySelector('.window-tabs-content');
+  const tabContentEl = document.createElement('div');
+  tabContentEl.className = 'tab-content';
+  tabContentEl.dataset.tabId = tabId;
+  tabContentEl.innerHTML = '<div class="loading">Loading content...</div>';
+  tabsContent.appendChild(tabContentEl);
+  
+  // Update tabs UI
+  updateWindowTabs(windowId);
+  
+  // Switch to new tab
+  switchTab(windowId, tabId);
+  
+  // Load content
+  await loadTabContent(windowId, tabId);
+}
+
+async function loadTabContent(windowId, tabId) {
+  const win = openWindows[windowId];
+  if (!win) return;
+  
+  const tab = win.tabs.find(t => t.id === tabId);
+  if (!tab || tab.loaded) return;
+  
+  const contentEl = win.element.querySelector(`.tab-content[data-tab-id="${tabId}"]`);
+  if (!contentEl) return;
+  
+  const node = tab.node;
   
   if (node.pageId) {
     try {
@@ -632,8 +881,107 @@ async function createWindow(node) {
     contentEl.innerHTML = `<h1>${node.name}</h1><p>${node.description || 'No content yet.'}</p>`;
   }
   
-  // Setup node links after content loads
-  setupNodeLinks(windowEl);
+  tab.loaded = true;
+  
+  // Setup node links with middle-click support
+  setupNodeLinks(win.element, windowId);
+}
+
+function updateWindowTabs(windowId) {
+  const win = openWindows[windowId];
+  if (!win) return;
+  
+  const tabsContainer = win.element.querySelector('.window-tabs');
+  
+  if (win.tabs.length > 1) {
+    tabsContainer.classList.add('visible');
+    tabsContainer.innerHTML = win.tabs.map(tab => {
+      const cluster = clusters[tab.node.group];
+      const isActive = tab.id === win.activeTabId;
+      return `
+        <div class="window-tab ${isActive ? 'active' : ''}" data-tab-id="${tab.id}">
+          <span class="tab-dot" style="background: ${cluster?.color || '#6366f1'}"></span>
+          <span class="tab-title">${tab.node.name}</span>
+          <button class="tab-close" title="Close tab">×</button>
+        </div>
+      `;
+    }).join('');
+    
+    // Setup tab click handlers
+    tabsContainer.querySelectorAll('.window-tab').forEach(tabEl => {
+      tabEl.addEventListener('click', (e) => {
+        if (e.target.classList.contains('tab-close')) {
+          closeTab(windowId, tabEl.dataset.tabId);
+        } else {
+          switchTab(windowId, tabEl.dataset.tabId);
+        }
+      });
+    });
+  } else {
+    tabsContainer.classList.remove('visible');
+    tabsContainer.innerHTML = '';
+  }
+  
+  // Update window title to show active tab
+  const activeTab = win.tabs.find(t => t.id === win.activeTabId);
+  if (activeTab) {
+    const titleText = win.element.querySelector('.window-title-text');
+    const titleDot = win.element.querySelector('.window-title-dot');
+    const cluster = clusters[activeTab.node.group];
+    
+    if (titleText) titleText.textContent = activeTab.node.name;
+    if (titleDot) titleDot.style.background = cluster?.color || '#6366f1';
+  }
+}
+
+function switchTab(windowId, tabId) {
+  const win = openWindows[windowId];
+  if (!win) return;
+  
+  win.activeTabId = tabId;
+  
+  // Update tab content visibility
+  win.element.querySelectorAll('.tab-content').forEach(content => {
+    content.classList.toggle('active', content.dataset.tabId === tabId);
+  });
+  
+  // Update tab bar
+  updateWindowTabs(windowId);
+  
+  // Update background color based on active tab's cluster
+  const activeTab = win.tabs.find(t => t.id === tabId);
+  if (activeTab) {
+    updateBackground(activeTab.node.group);
+  }
+}
+
+function closeTab(windowId, tabId) {
+  const win = openWindows[windowId];
+  if (!win) return;
+  
+  // If only one tab, close the window
+  if (win.tabs.length === 1) {
+    closeWindow(windowId);
+    return;
+  }
+  
+  // Find and remove the tab
+  const tabIndex = win.tabs.findIndex(t => t.id === tabId);
+  if (tabIndex === -1) return;
+  
+  win.tabs.splice(tabIndex, 1);
+  
+  // Remove tab content
+  const contentEl = win.element.querySelector(`.tab-content[data-tab-id="${tabId}"]`);
+  contentEl?.remove();
+  
+  // If we closed the active tab, switch to another
+  if (win.activeTabId === tabId) {
+    const newActiveTab = win.tabs[Math.max(0, tabIndex - 1)];
+    switchTab(windowId, newActiveTab.id);
+  } else {
+    updateWindowTabs(windowId);
+  }
 }
 
 function setupWindowDrag(windowEl, windowId) {
@@ -643,7 +991,7 @@ function setupWindowDrag(windowEl, windowId) {
   
   header.addEventListener('mousedown', (e) => {
     if (e.target.tagName === 'BUTTON') return;
-    if (openWindows[windowId].maximized) return;
+    if (openWindows[windowId]?.maximized) return;
     
     isDragging = true;
     startX = e.clientX;
@@ -737,19 +1085,41 @@ function setupWindowControls(windowEl, windowId) {
   });
 }
 
-function setupNodeLinks(windowEl) {
+function setupNodeLinks(windowEl, windowId) {
   const nodeLinks = windowEl.querySelectorAll('.node-link');
   
   nodeLinks.forEach(link => {
-    link.addEventListener('click', (e) => {
+    // Remove existing listeners by cloning
+    const newLink = link.cloneNode(true);
+    link.parentNode.replaceChild(newLink, link);
+    
+    // Left click - new window or tab based on settings
+    newLink.addEventListener('click', (e) => {
       e.preventDefault();
-      const targetNodeId = link.dataset.node;
+      const targetNodeId = newLink.dataset.node;
       const targetNode = graphData.nodes.find(n => n.id === targetNodeId);
       
       if (targetNode) {
-        createWindow(targetNode);
+        if (settings.openInTabs && windowId) {
+          addTabToWindow(windowId, targetNode);
+        } else {
+          createWindow(targetNode);
+        }
         updateBackground(targetNode.group);
         focusOnNode(targetNode);
+      }
+    });
+    
+    // Middle click - always open as tab in current window
+    newLink.addEventListener('auxclick', (e) => {
+      if (e.button === 1) { // Middle click
+        e.preventDefault();
+        const targetNodeId = newLink.dataset.node;
+        const targetNode = graphData.nodes.find(n => n.id === targetNodeId);
+        
+        if (targetNode && windowId) {
+          addTabToWindow(windowId, targetNode);
+        }
       }
     });
   });
@@ -811,11 +1181,16 @@ function updateTaskbar() {
     taskbar.classList.add('visible');
     
     taskbarItems.innerHTML = minimizedWindows.map(([id, win]) => {
-      const cluster = clusters[win.node.group];
+      // Get the active tab's info for display
+      const activeTab = win.tabs.find(t => t.id === win.activeTabId);
+      const node = activeTab?.node || win.tabs[0]?.node;
+      const cluster = clusters[node?.group];
+      const tabCount = win.tabs.length > 1 ? ` (${win.tabs.length})` : '';
+      
       return `
         <div class="taskbar-item" data-window-id="${id}">
           <span class="dot" style="background: ${cluster?.color || '#6366f1'}"></span>
-          ${win.node.name}
+          ${node?.name || 'Window'}${tabCount}
         </div>
       `;
     }).join('');
@@ -832,6 +1207,7 @@ function updateTaskbar() {
 
 // Start the app
 init();
+initSettings();
 
 
 // === MUSIC PLAYER ===
@@ -859,9 +1235,9 @@ const musicPlayer = {
   init() {
     // Default playlist - can be configured
     this.playlist = [
-      { title: 'Ambient Track 1', src: 'public/music/01-02. Your Own Personal Universe.mp3' },
-      { title: 'Ambient Track 2', src: 'public/music/01-04. Sporepedia Galactica.mp3' },
-      { title: 'Ambient Track 3', src: 'public/music/08. Heal.mp3' }
+      { title: 'Ambient Track 1', src: '/music/track1.mp3' },
+      { title: 'Ambient Track 2', src: '/music/track2.mp3' },
+      { title: 'Ambient Track 3', src: '/music/track3.mp3' }
     ];
     
     // Set initial volume
